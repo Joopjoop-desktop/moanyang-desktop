@@ -2,8 +2,9 @@ import { mkdirSync } from 'fs'
 import { dirname } from 'path'
 import Database from 'better-sqlite3'
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
+import * as schema from './schema'
 
-export type AppDatabase = BetterSQLite3Database
+export type AppDatabase = BetterSQLite3Database<typeof schema>
 
 export type DatabaseConnection = {
   db: AppDatabase
@@ -23,7 +24,7 @@ export function openDatabase(filePath: string): DatabaseConnection {
   sqlite.pragma('journal_mode = WAL')
 
   return {
-    db: drizzle({ client: sqlite }),
+    db: drizzle({ client: sqlite, schema }),
     close: () => sqlite.close()
   }
 }
