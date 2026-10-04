@@ -57,13 +57,46 @@ npm install
 | `npm run typecheck`     | 타입 검사 (main·preload / renderer)          |
 | `npm run format`        | Prettier로 전체 포맷 정리                    |
 | `npm run format:check`  | 포맷 검사만                                  |
+| `npm run db:generate`   | 스키마 변경으로 마이그레이션 SQL 생성 (`drizzle/`) |
 
-DB 마이그레이션(`db:generate`)과 E2E 테스트(`test:e2e`) 명령은 해당 기능 구현 시 추가합니다.
+E2E 테스트(`test:e2e`) 명령은 해당 기능 구현 시 추가합니다.
+
+### DB 작업
+
+**DB 파일 위치**
+
+| 실행 방식 | 경로 |
+| --- | --- |
+| 개발 모드 (`npm run dev`) | 프로젝트의 `data/joopjoop.db` (Git 제외) |
+| 설치된 앱 / `build:unpack` | `%APPDATA%\Joopjoop\joopjoop.db` |
+
+- 앱이 시작할 때 DB 생성 → 미적용 마이그레이션 실행 → 시스템 라벨 추가가 자동으로 진행됩니다.
+- WAL 모드라 DB 파일 옆에 `-wal`, `-shm` 파일이 함께 생깁니다. 정상입니다.
+- 개발 DB를 처음부터 다시 만들려면 앱을 끈 뒤 `data/` 폴더를 지우고 다시 실행합니다.
+
+**스키마 변경 순서**
+
+1. `src/main/db/schema.ts`를 수정합니다.
+2. `npm run db:generate`로 `drizzle/`에 새 마이그레이션 SQL을 만듭니다.
+3. 생성된 SQL을 확인합니다. (외래 키, 인덱스, 기본값)
+4. `npm run dev`로 실행하면 개발 DB에 자동 적용됩니다.
+5. 스키마와 마이그레이션 파일을 **같은 커밋**에 넣습니다.
+
+- 생성된 마이그레이션 파일은 직접 수정하지 않습니다.
+- **`main`에 병합된 마이그레이션은 지우거나 다시 만들지 않습니다.** 이미 누군가의 DB에 적용됐을 수 있으므로, 고칠 내용은 새 마이그레이션으로 추가합니다. 아직 병합 전이고 내 개발 DB에만 적용했다면, 마이그레이션을 지우고 다시 만든 뒤 `data/`도 지워서 처음부터 적용합니다.
+- `__drizzle_migrations` 테이블은 Drizzle이 적용 이력을 기록하는 곳입니다. 직접 수정하지 않습니다.
+
+**DB 들여다보기 (DBeaver / DB Browser for SQLite)**
+
+- DBeaver에서 SQLite 연결을 만들고 위 경로의 `joopjoop.db`를 지정합니다.
+- 연결 설정에서 **읽기 전용 연결(Read-only connection)** 을 켜 두면 앱을 켠 채로 함께 볼 수 있습니다. 앱이 데이터를 바꾼 뒤에는 F5로 새로고침합니다.
+- 값을 직접 고쳐야 할 때만 앱을 끄고 읽기 전용을 해제합니다.
 
 ### 테스트 작성
 
 - 단위 테스트 파일은 대상 파일 옆에 `*.test.ts`로 둡니다. (예: `src/main/domain/merge.test.ts`)
 - 단위 테스트는 Electron 없이 Node에서 실행됩니다. `domain/`과 `services/`가 주 대상입니다.
+- better-sqlite3는 Electron용으로 빌드되어 있어 일반 Node(Vitest)에서 바로 불러올 수 없습니다. DB를 쓰는 테스트 방식은 저장소·서비스 구현 단계에서 정합니다.
 
 ### 문제 해결
 
@@ -80,6 +113,16 @@ node node_modules/electron/install.js
 ```bash
 npm approve-scripts --allow-scripts-pending
 ```
+
+**`NODE_MODULE_VERSION` 불일치 에러 (better-sqlite3)**
+네이티브 모듈이 현재 Electron 버전용으로 빌드되지 않은 상태입니다. Electron 버전을 바꿨거나 `npm rebuild`를 실행한 뒤에 생길 수 있습니다. 아래로 다시 빌드합니다.
+
+```bash
+npx electron-builder install-app-deps
+```
+
+**앱 시작 시 "데이터베이스를 준비하지 못했습니다" 창**
+DB 열기나 마이그레이션 실행이 실패한 경우입니다. 창에 표시된 메시지로 원인을 확인합니다. 개발 모드라면 터미널의 `[db] init failed` 로그도 함께 확인합니다.
 
 ### 환경 변수
 
@@ -153,6 +196,11 @@ IPC (Controller) → Service → Domain / Repository → DB
 - **ID는 UUID v7을 사용합니다.**
 - **삭제는 소프트 딜리트입니다.** 삭제 여부 필터는 저장소(`repositories/`) 계층에서만 처리합니다. 기본 조회 메서드는 삭제된 데이터를 자동으로 제외하고, 삭제된 데이터까지 봐야 하는 경우(휴지통, 하드 딜리트)만 별도 메서드를 사용합니다.
 - **DB 위치:** 개발 모드는 프로젝트 내 `data/`(Git 제외), 배포 빌드는 Electron `userData` 경로입니다.
+- **시각은 `nowIso()`(`src/main/infra/time.ts`)로만 만듭니다.** 항상 UTC·밀리초 포함 ISO 문자열이어야 문자열 정렬이 시간 순서와 같습니다. 날짜 요소(`dateValue`, `timeValue`)는 달력상의 날짜이므로 UTC로 바꾸지 않습니다.
+- **ID는 `newId()`(`src/main/infra/id.ts`)로만 만듭니다.**
+- **SQLite 연결 설정(외래 키 검사, WAL)은 `src/main/db/connection.ts` 한 곳에서만 합니다.** 외래 키 검사는 연결마다 초기화되므로 DB를 여는 다른 경로를 만들지 않습니다.
+- **종류 값(`type`, `status` 등)의 허용 목록은 `src/shared/model.ts`에 있습니다.** DB에는 제약을 걸지 않으므로 이 타입을 거쳐서만 값을 넣습니다.
+- **시스템 라벨은 이름이 아닌 `key`로 찾습니다.** 목록은 `src/main/db/systemLabels.ts`에 있고 앱 시작 시 DB에 반영됩니다.
 
 ### 개인정보 원칙
 
@@ -170,7 +218,7 @@ IPC (Controller) → Service → Domain / Repository → DB
 | UI 확인             | 앱 창에서 Chrome 개발자 도구 열기                                                  |
 | 코어 기능 직접 호출 | 개발자 도구 콘솔에서 preload가 노출한 함수 호출                                    |
 | 코어 디버깅         | VS Code 디버거를 메인 프로세스에 연결 (`.vscode/launch.json`)                      |
-| DB 확인             | DB Browser for SQLite 또는 DBeaver로 `data/` 안의 DB 파일 열기 (수정은 앱 종료 후) |
+| DB 확인             | DBeaver 읽기 전용 연결로 `data/joopjoop.db` 열기 ([DB 작업](#db-작업) 참고) |
 | IPC 명세 확인       | `src/shared`의 타입 정의                                                           |
 
 ---
