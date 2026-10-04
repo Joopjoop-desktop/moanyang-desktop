@@ -27,13 +27,11 @@
 
 ## 시작하기
 
-> 프로젝트 뼈대 구성 후 확정됩니다. 아래 명령어는 예정입니다.
-
 ### 요구 사항
 
-- Node.js (버전 확정 예정)
+- Node.js 24 LTS 이상 (`.nvmrc` 참고), npm 11 이상
 - Windows 10 이상
-- better-sqlite3 네이티브 빌드를 위한 Visual Studio Build Tools (C++ 빌드 도구)
+- (네이티브 모듈 빌드 실패 시) Visual Studio Build Tools의 C++ 빌드 도구
 
 ### 설치
 
@@ -41,20 +39,47 @@
 npm install
 ```
 
-설치 후 `postinstall`에서 better-sqlite3가 Electron 버전에 맞게 자동으로 리빌드됩니다.
+- 설치 후 `postinstall`에서 네이티브 모듈이 Electron 버전에 맞게 자동으로 리빌드됩니다.
+- 설치 시 `prepare`가 husky Git hook을 연결합니다. 이후 커밋할 때마다 바뀐 파일에 ESLint·Prettier가 자동 실행되며, 검사를 건너뛰지 않습니다.
 
 ### 주요 명령어
 
-| 명령어                | 설명                                  |
-| --------------------- | ------------------------------------- |
-| `npm run dev`         | 개발 모드 실행 (핫 리로드)            |
-| `npm run build`       | 프로덕션 빌드                         |
-| `npm run build:win`   | Windows 설치 파일 생성                |
-| `npm run test`        | 단위 테스트 (Vitest)                  |
-| `npm run test:e2e`    | E2E 테스트 (Playwright)               |
-| `npm run lint`        | ESLint 검사                           |
-| `npm run typecheck`   | 타입 검사                             |
-| `npm run db:generate` | 스키마 변경으로 마이그레이션 SQL 생성 |
+| 명령어                  | 설명                                         |
+| ----------------------- | -------------------------------------------- |
+| `npm run dev`           | 개발 모드 실행 (핫 리로드). 종료는 `Ctrl+C`  |
+| `npm run start`         | 빌드 결과물로 실행 (배포 빌드 미리보기)      |
+| `npm run build`         | 타입 검사 후 프로덕션 빌드 (`out/`)          |
+| `npm run build:unpack`  | 설치 파일 없이 패키징만 (`dist/win-unpacked`) |
+| `npm run build:win`     | Windows 설치 파일 생성 (`dist/`)             |
+| `npm run test`          | 단위 테스트 1회 실행 (Vitest)                |
+| `npm run test:watch`    | 단위 테스트 감시 모드                        |
+| `npm run lint`          | ESLint 검사 (층 분리 규칙 포함)              |
+| `npm run typecheck`     | 타입 검사 (main·preload / renderer)          |
+| `npm run format`        | Prettier로 전체 포맷 정리                    |
+| `npm run format:check`  | 포맷 검사만                                  |
+
+DB 마이그레이션(`db:generate`)과 E2E 테스트(`test:e2e`) 명령은 해당 기능 구현 시 추가합니다.
+
+### 테스트 작성
+
+- 단위 테스트 파일은 대상 파일 옆에 `*.test.ts`로 둡니다. (예: `src/main/domain/merge.test.ts`)
+- 단위 테스트는 Electron 없이 Node에서 실행됩니다. `domain/`과 `services/`가 주 대상입니다.
+
+### 문제 해결
+
+**`npm run dev` 시 `Error: Electron uninstall`**
+Electron 실행 파일이 내려받아지지 않은 상태입니다. npm 11은 허용 목록(`package.json`의 `allowScripts`)에 없는 패키지의 설치 스크립트를 실행하지 않습니다. 아래를 실행하면 실행 파일을 직접 내려받습니다.
+
+```bash
+node node_modules/electron/install.js
+```
+
+**Electron·esbuild 버전을 올린 뒤 설치 스크립트 경고가 나올 때**
+`allowScripts`는 버전 단위로 기록됩니다. 버전을 올렸다면 새 버전을 다시 허용합니다.
+
+```bash
+npm approve-scripts --allow-scripts-pending
+```
 
 ### 환경 변수
 
