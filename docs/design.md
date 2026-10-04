@@ -194,6 +194,7 @@ joopjoop-desktop/
 | captureId | 출처 먹이, 사용자가 직접 만든 요소(메모 등)는 null |
 | orderIndex | 블록 안에서의 순서 |
 | deletedAt | 소프트 딜리트 시각 |
+| deleteReason | `user`(사용자가 직접 삭제) / `discarded`(충돌에서 버려짐), 삭제되지 않았으면 null |
 | createdAt / updatedAt | |
 
 - 날짜를 JSON이 아닌 전용 컬럼으로 두는 이유: 캘린더에서 날짜로 조회·정렬하므로 인덱스가 필요하다.
@@ -219,7 +220,7 @@ joopjoop-desktop/
 |---|---|
 | id | UUID v7 |
 | entityType / entityId | 대상 |
-| action | 예: `element.created`, `element.updated`, `element.moved`, `element.discarded`, `block.reviewed`, `block.completed`, `label.attached` |
+| action | 예: `element.created`, `element.updated`, `element.moved`, `element.deleted`, `element.discarded`, `block.deleted`, `block.reviewed`, `block.completed`, `label.attached` |
 | before / after | 변경 전후 값 (JSON) |
 | occurredAt | |
 
@@ -255,15 +256,37 @@ Block   N ── M Label   (BlockLabel)
 - 블록이 합쳐진 뒤 또 다른 블록이 합쳐져도 계층 없이 하나의 블록에 요소가 추가될 뿐이다.
 
 ### 7.2 같은 종류 요소 충돌
-- 이동으로 같은 종류 요소가 겹치면 **사용자가 남길 요소를 고른다.** 여러 개를 함께 남길 수도 있다.
-- **고르지 않은 요소는 버린다.** (History에 `element.discarded`로 남음)
+
+#### 충돌 대상 여부
+요소 종류마다 **"충돌 대상 여부" 속성**을 둔다. 새 종류를 추가할 때는 이 속성만 정한다.
+
+| 묶음 | 종류 | 이동으로 겹치면 |
+|---|---|---|
+| 충돌 대상 (하나여야 자연스러운 것) | `task`, `start_date`, `due_date`, `requester` | 충돌 선택 |
+| 충돌 아님 (여러 개가 자연스러운 것) | `detail`, `memo` | 그냥 뒤에 추가 |
+
+- 날짜 역할: 시작일 + 마감일은 기간이 되며 충돌이 아니다. 마감일 + 마감일, 시작일 + 시작일은 충돌이다.
+
+#### 값이 완전히 같을 때 — 자동 정리
+- 겹친 요소의 값이 완전히 같으면 **선택 화면 없이 하나로 자동 정리**한다. 이동해 들어온 요소를 버리고 대상 블록에 있던 요소를 남긴다.
+- 정리된 요소는 History에 `element.discarded`로 남긴다.
+- 같은 값의 기준은 **엄격하게** 둔다.
+  - 텍스트: 앞뒤 공백만 정리한 뒤 완전히 일치할 때만
+  - 날짜: `dateValue`와 `timeValue`가 같을 때 (`rawText`는 달라도 같은 값으로 본다)
+  - "김과장"과 "김 과장"처럼 비슷하기만 한 값은 같은 값으로 보지 않고 선택 화면으로 보낸다.
+
+#### 값이 다를 때 — 충돌 선택
+- **사용자가 남길 요소를 고른다.** 여러 개를 함께 남길 수도 있다.
+- **고르지 않은 요소는 버린다.** 요소에 `deletedAt`, `deleteReason = 'discarded'`를 찍고 History에 `element.discarded`로 남긴다. 휴지통에는 보이지 않는다.
 - 같은 종류 요소가 여러 개 남으면 **우선순위 없이 모두 동일하게 표시**한다. 마감일이 둘이면 캘린더에도 둘 다 표시한다.
-- 날짜 역할: 시작일 + 마감일은 기간이 되며 충돌이 아니다. 마감일 + 마감일은 충돌이다.
 
 ### 7.3 블록 삭제와 빈 블록
 - **블록 삭제 시 요소에는 `deletedAt`을 찍지 않는다.** 블록만 삭제 표시하고, 복구하면 연결된 요소가 그대로 돌아온다. (요소에 찍으면 블록 삭제 전에 따로 지운 요소와 구분되지 않아 복구 시 함께 살아난다.)
 - 요소 이동으로 블록이 비면 → **자동 소프트 딜리트, `deleteReason = 'emptied'`**. 휴지통에 보이지 않는다. 라벨 연결도 함께 사라진다. 되돌리기는 이후 이력 기반 실행 취소가 맡는다.
-- 사용자가 블록의 **마지막 요소를 삭제**하면 → 요소에 `deletedAt`을 찍지 않고 **블록을 `deleteReason = 'user'`로 삭제**한다. 휴지통에 보이고, 복구하면 그 요소도 함께 돌아온다.
+- 사용자가 요소를 삭제하면 → 요소에 `deletedAt`, `deleteReason = 'user'`를 찍고 History에 `element.deleted`를 남긴다.
+- 단, 사용자가 블록의 **마지막 요소를 삭제**하면 → 요소에 `deletedAt`을 찍지 않고 **블록을 `deleteReason = 'user'`로 삭제**한다. 휴지통에 보이고, 복구하면 그 요소도 함께 돌아온다.
+  - History는 `block.deleted` **하나만** 남긴다. 요소는 실제로 삭제 상태가 아니므로 `element.deleted`를 남기지 않는다.
+  - `after`: `{ deleteReason: 'user', trigger: 'element.delete', elementId }`
 - 휴지통 목록은 `deleteReason = 'user'`만 보여준다.
 
 ### 7.4 상태와 라벨
@@ -454,8 +477,9 @@ type IpcResult<T> =
 
 ## 14. 확인 필요 항목
 
-- **메모의 충돌 처리**: 메모는 여러 개가 자연스러우므로 같은 종류 충돌 선택에서 제외할지 결정 필요
-- **충돌 대상 요소 종류**: 할 일·상세·요청자도 마감일처럼 충돌 선택을 받을지, 일부는 그냥 추가할지
 - **카톡 등 각 앱의 드래그 지원 여부** 실측 (카톡 PC는 드래그 불가 확인 → 붙여넣기로 대응)
-- **마지막 요소 삭제 시 History 기록**: `element.deleted`와 `block.deleted`를 둘 다 남길지
-- ~~프로젝트 뼈대 도구 선택~~ → electron-vite 확정
+
+### 결정 완료
+- ~~프로젝트 뼈대 도구 선택~~ → electron-vite 확정 (3장)
+- ~~메모의 충돌 처리~~ / ~~충돌 대상 요소 종류~~ → 7.2
+- ~~마지막 요소 삭제 시 History 기록~~ → 7.3
