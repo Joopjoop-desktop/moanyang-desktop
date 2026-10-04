@@ -6,10 +6,19 @@ files:
   - '!**/.vscode/*'
   - '!src/*'
   - '!docs/*'
-  - '!{electron.vite,vitest}.config.{js,ts,mjs,cjs}'
+  # 개발용 DB와 마이그레이션 원본은 asar에 넣지 않는다 (마이그레이션은 extraResources로 별도 포함)
+  - '!data/**'
+  - '!drizzle/**'
+  - '!{electron.vite,vitest,drizzle}.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,.editorconfig,.nvmrc,CHANGELOG.md,README.md,CLAUDE.md}'
   - '!{.env,.env.*,.npmrc}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+# 마이그레이션 SQL은 asar 밖 resources/drizzle/에 둔다 (설계 3.1)
+extraResources:
+  - from: drizzle
+    to: drizzle
+    filter:
+      - '**/*'
 asarUnpack:
   - resources/**
 win:

@@ -85,6 +85,7 @@ TypeORM → Drizzle 변경 이유: vite(esbuild)는 TypeORM이 의존하는 데�
 - electron-vite에서 코어(main) 층은 외부 의존성을 번들에 포함하지 않고 `node_modules`에서 불러오도록 설정한다.
 - better-sqlite3는 electron-builder의 설치 후 리빌드(`install-app-deps`)를 `postinstall`에 걸어 Electron 버전에 맞게 자동 리빌드한다.
 - 마이그레이션은 drizzle-kit으로 SQL 파일을 생성하고 앱 패키지에 포함되도록 패키징 설정을 한다. 앱 시작 시 미적용 마이그레이션을 순서대로 실행한다.
+- 마이그레이션 SQL은 asar 패키지 밖(electron-builder `extraResources`)에 둔다. asar 안에서 읽을 때보다 경로 문제가 적다.
 - 마이그레이션 폴더 경로는 개발 모드와 패키징된 앱에서 다르므로 시작 시 환경에 따라 결정한다.
 
 ---
@@ -216,9 +217,13 @@ joopjoop-desktop/
 | 필드     | 설명                                         |
 | -------- | -------------------------------------------- |
 | id       | UUID v7                                      |
+| key      | 시스템 라벨 식별자 (예: `waiting_reply`), unique. 사용자 라벨은 null |
 | name     | 예: 조율 중, 회신 대기                       |
 | isSystem | 시스템 제공 여부 (시스템 라벨은 기능과 연결) |
 | groupKey | 같은 그룹 안에서는 하나만 붙음               |
+
+- 코드는 시스템 라벨을 이름이 아닌 `key`로 찾는다. 이름을 바꿔도 기능이 깨지지 않는다.
+- 시스템 라벨 목록은 코드에 두고, **앱 시작 시 `key` 기준으로 없는 라벨만 추가**한다. 이름이 바뀌었으면 갱신한다.
 
 #### BlockLabel — 블록–라벨 N:M
 
@@ -250,10 +255,52 @@ Block   N ── M Label   (BlockLabel)
 
 ### 6.4 공통 규칙
 
-- **ID**: UUID v7 (선택형 동기화 대비, 시간순 정렬 가능)
-- **삭제**: 소프트 딜리트 → 일정 기간(예: 30일) 경과 후 앱 시작 시 하드 딜리트. 하드 딜리트 시 관련 요소·라벨 연결·이력도 함께 삭제
+- **ID**: UUID v7 (선택형 동기화 대비, 시간순 정렬 가능). `uuid` 패키지의 `v7()`로 생성
+- **삭제**: 소프트 딜리트 → 일정 기간(예: 30일) 경과 후 앱 시작 시 하드 딜리트 (아래 "하드 딜리트")
 - **마이그레이션**: MVP부터 적용. drizzle-kit으로 SQL 생성, 앱 시작 시 실행 (3.1 참고)
-- **DB 위치**: 배포는 Electron `userData` 경로, 개발은 프로젝트 내 `data/` (`.gitignore` 처리)
+- **DB 위치**: 배포는 Electron `userData` 경로, 개발은 프로젝트 내 `data/` (`.gitignore` 처리). 파일 이름은 `joopjoop.db`
+
+#### 저장 형식
+
+| 값 | 형식 | 예시 |
+|---|---|---|
+| 시각 (`createdAt`, `deletedAt`, `capturedAt` 등) | ISO 8601 문자열, **항상 UTC(`Z`)·밀리초 포함** | `2026-10-04T09:00:00.000Z` |
+| 날짜 요소 `dateValue` | `YYYY-MM-DD` 문자열 (시간대 없는 달력 날짜) | `2026-10-09` |
+| 날짜 요소 `timeValue` | `HH:mm` 문자열 | `11:00` |
+| 참/거짓 (`isSystem`, `needsConfirm`) | SQLite 정수 0/1 (Drizzle boolean 모드) | |
+| History `before` / `after` | JSON 문자열 | |
+
+- **시각 문자열은 `new Date().toISOString()`으로만 만든다.** 문자열 순서 정렬이 시간 순서와 같으려면 모든 값이 같은 형식이어야 한다. 시각 생성 함수를 한 곳에 두고 그 함수만 사용한다.
+- `dateValue`·`timeValue`는 사용자가 본 달력상의 날짜·시간이므로 UTC로 바꾸지 않는다.
+
+#### 외래 키와 인덱스
+
+| 관계 | 삭제 시 동작 |
+|---|---|
+| Element.blockId → Block | `ON DELETE CASCADE` (블록을 지우면 요소도 삭제) |
+| BlockLabel.blockId → Block, BlockLabel.labelId → Label | `ON DELETE CASCADE` |
+| Element.captureId → Capture | `ON DELETE SET NULL` (출처 정보만 비우고 요소는 유지) |
+| History | 외래 키 없음 (여러 종류의 대상을 가리킴). 하드 딜리트 코드에서 직접 삭제 |
+
+- 종류 값(`type`, `status`, `method`, `deleteReason`)은 문자열 컬럼, 허용 값은 TypeScript 타입으로만 제한한다. DB CHECK 제약을 걸지 않는다(종류 추가 시 테이블 재생성 방지).
+- `orderIndex`는 정수. 순서가 바뀌면 그 블록의 요소 번호를 다시 매긴다.
+- BlockLabel 기본 키는 `(blockId, labelId)`.
+- 인덱스: Element `blockId`, Element `dateValue`, Element `captureId`(Capture 하드 딜리트용), History `(entityType, entityId)`.
+- DB 컬럼 이름은 snake_case (`block_id`), 코드에서는 camelCase (`blockId`).
+
+#### 하드 딜리트
+앱 시작 시 보관 기간(예: 30일)이 지난 데이터를 지운다.
+
+| 대상 | 조건 | 함께 지워지는 것 |
+|---|---|---|
+| Block | `deletedAt`이 기간 경과 | 요소·라벨 연결(CASCADE), 블록과 그 요소들의 History(코드에서 직접) |
+| Element | 블록이 살아 있어도 요소 자신의 `deletedAt`이 기간 경과 | 그 요소의 History |
+| Capture | 연결된 요소가 없고 `capturedAt`이 기간 경과 (`notTask`, `failed` 등) | — |
+
+#### SQLite 연결 설정
+- **외래 키 검사**: SQLite는 기본으로 꺼져 있고 연결마다 초기화되므로, **DB를 열 때마다** `PRAGMA foreign_keys = ON`을 실행한다.
+- **WAL 모드**: `PRAGMA journal_mode = WAL`. 쓰는 중에도 읽기가 막히지 않는다.
+- 이 설정은 DB 연결 코드 한 곳에서만 처리한다.
 
 ### 6.5 소프트 딜리트 판단
 
@@ -320,6 +367,14 @@ Block   N ── M Label   (BlockLabel)
 - 새로 생긴 블록은 기본값(검토 전, 미완료, 라벨 없음)으로 시작한다.
 - 라벨은 사용자가 직접 붙이고 뗀다. AI는 라벨을 자동으로 붙이지 않는다.
 - 시스템 라벨은 기능과 연결된다. (이후: 회신 대기 → N일 후 알림, 조율 중 → 가일정 표시)
+- 시스템 라벨 목록:
+
+  | key | 이름 | groupKey |
+  |---|---|---|
+  | `coordinating` | 조율 중 | `progress` |
+  | `waiting_reply` | 회신 대기 | `progress` |
+
+  - 둘은 같은 그룹이므로 한 블록에 하나만 붙는다.
 - 사용자 정의 라벨은 구조만 지원하고 화면 기능은 MVP 이후에 연다.
 
 ### 7.5 캘린더 표시
