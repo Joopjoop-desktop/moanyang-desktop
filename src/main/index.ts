@@ -1,8 +1,12 @@
 import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { openDatabase, type DatabaseConnection } from './db/connection'
+import { resolveDatabasePath } from './db/paths'
 
 const APP_USER_MODEL_ID = 'com.joopjoop.desktop'
+
+let database: DatabaseConnection | null = null
 
 function createStudioWindow(): void {
   const window = new BrowserWindow({
@@ -45,9 +49,18 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  const dbPath = resolveDatabasePath()
+  database = openDatabase(dbPath)
+  console.log(`[db] opened: ${dbPath}`)
+
   createStudioWindow()
 })
 
 app.on('window-all-closed', () => {
   app.quit()
+})
+
+app.on('will-quit', () => {
+  database?.close()
+  database = null
 })
