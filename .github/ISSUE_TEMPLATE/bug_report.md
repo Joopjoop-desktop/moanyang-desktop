@@ -1,17 +1,16 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-title: "[Fix] "
+title: '[Fix] '
 labels: ''
 assignees: ''
-
 ---
 
 ## 📝 에러 설명
 
 <!-- 어떤 부분이 에러가 발생했는 설명 기재 -->
 
-## 🌿  To-do
+## 🌿 To-do
 
 <!-- 해야 할 일들을 적어주세요. -->
 

@@ -1,10 +1,9 @@
 ---
 name: Refactor template
 about: Refactor project
-title: "[Refactor] "
+title: '[Refactor] '
 labels: ''
 assignees: ''
-
 ---
 
 ## 📝 리팩토링 설명
