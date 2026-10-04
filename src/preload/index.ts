@@ -1,22 +1,7 @@
 import { contextBridge } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+import type { JoopjoopApi } from '@shared/api'
 
-// Custom APIs for renderer
-const api = {}
+// renderer에는 이 객체에 정의한 함수만 노출한다. ipcRenderer를 통째로 노출하지 않는다.
+const api: JoopjoopApi = {}
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
-}
+contextBridge.exposeInMainWorld('api', api)
