@@ -24,3 +24,7 @@ export type BlockDeleteReason = (typeof BLOCK_DELETE_REASONS)[number]
 
 export const ELEMENT_DELETE_REASONS = ['user', 'discarded'] as const
 export type ElementDeleteReason = (typeof ELEMENT_DELETE_REASONS)[number]
+
+/** 시스템 라벨 식별자 (Label.key) */
+export const SYSTEM_LABEL_KEYS = ['coordinating', 'waiting_reply'] as const
+export type SystemLabelKey = (typeof SYSTEM_LABEL_KEYS)[number]
