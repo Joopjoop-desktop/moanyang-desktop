@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, dialog, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import type { DatabaseConnection } from './db/connection'
@@ -49,7 +49,19 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  database = initDatabase()
+  try {
+    database = initDatabase()
+  } catch (error) {
+    // DB 준비에 실패하면 창 없이 멈춰 있지 않도록 알리고 종료한다.
+    console.error('[db] init failed', error)
+    const detail = error instanceof Error ? error.message : String(error)
+    dialog.showErrorBox(
+      '줍줍을 시작할 수 없습니다',
+      `데이터베이스를 준비하지 못했습니다.\n\n${detail}`
+    )
+    app.quit()
+    return
+  }
 
   createStudioWindow()
 })
