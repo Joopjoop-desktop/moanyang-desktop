@@ -274,6 +274,7 @@ Block   N ── M Label   (BlockLabel)
   - 텍스트: 앞뒤 공백만 정리한 뒤 완전히 일치할 때만
   - 날짜: `dateValue`와 `timeValue`가 같을 때 (`rawText`는 달라도 같은 값으로 본다)
   - "김과장"과 "김 과장"처럼 비슷하기만 한 값은 같은 값으로 보지 않고 선택 화면으로 보낸다.
+- 날짜 요소를 자동 정리할 때 둘 중 하나라도 `needsConfirm = false`(확인됨)이면 남는 요소의 `needsConfirm`을 끈다. 이 변경도 History에 `element.updated`로 남긴다.
 
 #### 값이 다를 때 — 충돌 선택
 - **사용자가 남길 요소를 고른다.** 여러 개를 함께 남길 수도 있다.
