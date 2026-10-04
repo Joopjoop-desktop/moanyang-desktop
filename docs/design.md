@@ -85,6 +85,7 @@ TypeORM → Drizzle 변경 이유: vite(esbuild)는 TypeORM이 의존하는 데�
 - electron-vite에서 코어(main) 층은 외부 의존성을 번들에 포함하지 않고 `node_modules`에서 불러오도록 설정한다.
 - better-sqlite3는 electron-builder의 설치 후 리빌드(`install-app-deps`)를 `postinstall`에 걸어 Electron 버전에 맞게 자동 리빌드한다.
 - 마이그레이션은 drizzle-kit으로 SQL 파일을 생성하고 앱 패키지에 포함되도록 패키징 설정을 한다. 앱 시작 시 미적용 마이그레이션을 순서대로 실행한다.
+- 마이그레이션 SQL은 asar 패키지 밖(electron-builder `extraResources`)에 둔다. asar 안에서 읽을 때보다 경로 문제가 적다.
 - 마이그레이션 폴더 경로는 개발 모드와 패키징된 앱에서 다르므로 시작 시 환경에 따라 결정한다.
 
 ---
@@ -250,10 +251,28 @@ Block   N ── M Label   (BlockLabel)
 
 ### 6.4 공통 규칙
 
-- **ID**: UUID v7 (선택형 동기화 대비, 시간순 정렬 가능)
+- **ID**: UUID v7 (선택형 동기화 대비, 시간순 정렬 가능). `uuid` 패키지의 `v7()`로 생성
 - **삭제**: 소프트 딜리트 → 일정 기간(예: 30일) 경과 후 앱 시작 시 하드 딜리트. 하드 딜리트 시 관련 요소·라벨 연결·이력도 함께 삭제
 - **마이그레이션**: MVP부터 적용. drizzle-kit으로 SQL 생성, 앱 시작 시 실행 (3.1 참고)
-- **DB 위치**: 배포는 Electron `userData` 경로, 개발은 프로젝트 내 `data/` (`.gitignore` 처리)
+- **DB 위치**: 배포는 Electron `userData` 경로, 개발은 프로젝트 내 `data/` (`.gitignore` 처리). 파일 이름은 `joopjoop.db`
+
+#### 저장 형식
+
+| 값 | 형식 | 예시 |
+|---|---|---|
+| 시각 (`createdAt`, `deletedAt`, `capturedAt` 등) | ISO 8601 문자열, **항상 UTC(`Z`)·밀리초 포함** | `2026-10-04T09:00:00.000Z` |
+| 날짜 요소 `dateValue` | `YYYY-MM-DD` 문자열 (시간대 없는 달력 날짜) | `2026-10-09` |
+| 날짜 요소 `timeValue` | `HH:mm` 문자열 | `11:00` |
+| 참/거짓 (`isSystem`, `needsConfirm`) | SQLite 정수 0/1 (Drizzle boolean 모드) | |
+| History `before` / `after` | JSON 문자열 | |
+
+- **시각 문자열은 `new Date().toISOString()`으로만 만든다.** 문자열 순서 정렬이 시간 순서와 같으려면 모든 값이 같은 형식이어야 한다. 시각 생성 함수를 한 곳에 두고 그 함수만 사용한다.
+- `dateValue`·`timeValue`는 사용자가 본 달력상의 날짜·시간이므로 UTC로 바꾸지 않는다.
+
+#### SQLite 연결 설정
+- **외래 키 검사**: SQLite는 기본으로 꺼져 있고 연결마다 초기화되므로, **DB를 열 때마다** `PRAGMA foreign_keys = ON`을 실행한다.
+- **WAL 모드**: `PRAGMA journal_mode = WAL`. 쓰는 중에도 읽기가 막히지 않는다.
+- 이 설정은 DB 연결 코드 한 곳에서만 처리한다.
 
 ### 6.5 소프트 딜리트 판단
 
