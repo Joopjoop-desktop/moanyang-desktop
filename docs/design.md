@@ -285,7 +285,7 @@ Block   N ── M Label   (BlockLabel)
 - 종류 값(`type`, `status`, `method`, `deleteReason`)은 문자열 컬럼, 허용 값은 TypeScript 타입으로만 제한한다. DB CHECK 제약을 걸지 않는다(종류 추가 시 테이블 재생성 방지).
 - `orderIndex`는 정수. 순서가 바뀌면 그 블록의 요소 번호를 다시 매긴다.
 - BlockLabel 기본 키는 `(blockId, labelId)`.
-- 인덱스: Element `blockId`, Element `dateValue`, History `(entityType, entityId)`.
+- 인덱스: Element `blockId`, Element `dateValue`, Element `captureId`(Capture 하드 딜리트용), History `(entityType, entityId)`.
 - DB 컬럼 이름은 snake_case (`block_id`), 코드에서는 camelCase (`blockId`).
 
 #### 하드 딜리트

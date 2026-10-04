@@ -6,7 +6,7 @@ files:
   - '!**/.vscode/*'
   - '!src/*'
   - '!docs/*'
-  - '!{electron.vite,vitest}.config.{js,ts,mjs,cjs}'
+  - '!{electron.vite,vitest,drizzle}.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,.editorconfig,.nvmrc,CHANGELOG.md,README.md,CLAUDE.md}'
   - '!{.env,.env.*,.npmrc}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'

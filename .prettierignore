@@ -3,6 +3,7 @@ dist
 release
 coverage
 data
+drizzle
 package-lock.json
 tsconfig.json
 tsconfig.*.json

@@ -62,7 +62,9 @@ export const elements = sqliteTable(
   },
   (table) => [
     index('elements_block_id_idx').on(table.blockId),
-    index('elements_date_value_idx').on(table.dateValue)
+    index('elements_date_value_idx').on(table.dateValue),
+    // Capture 하드 딜리트(연결된 요소 확인)와 SET NULL 처리용
+    index('elements_capture_id_idx').on(table.captureId)
   ]
 )
 
