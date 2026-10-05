@@ -17,3 +17,10 @@ export type DomainElement = {
   needsConfirm: boolean
   orderIndex: number
 }
+
+/** 도메인 계산에 쓰는 라벨. 그룹 규칙에 필요한 값만 담는다. */
+export type DomainLabel = {
+  id: string
+  /** 같은 그룹 안에서는 하나만 붙음. null이면 다른 라벨에 영향 없음 */
+  groupKey: string | null
+}
