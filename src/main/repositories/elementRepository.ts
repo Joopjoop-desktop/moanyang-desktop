@@ -45,6 +45,19 @@ export class ElementRepository {
     return this.db.select().from(elements).where(eq(elements.id, id)).get()
   }
 
+  /**
+   * 휴지통 블록 화면용: 블록이 삭제됐어도 요소 자체가 삭제되지 않았으면 돌려준다 (orderIndex 순).
+   * 블록을 복구하면 돌아올 요소들이다. (설계 7.3)
+   */
+  findByBlockIncludingDeletedBlock(blockId: string): ElementRow[] {
+    return this.db
+      .select()
+      .from(elements)
+      .where(and(eq(elements.blockId, blockId), isNull(elements.deletedAt)))
+      .orderBy(asc(elements.orderIndex))
+      .all()
+  }
+
   insert(row: NewElementRow): void {
     this.db.insert(elements).values(row).run()
   }
