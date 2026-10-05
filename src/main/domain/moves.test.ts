@@ -158,7 +158,11 @@ describe('planMoveToBlock', () => {
       const plan = planMoveToBlock({
         source: block(S, [due('s-9', S, '2026-10-09', 0), due('s-10', S, '2026-10-10', 1)]),
         target: block(T, [
-          makeElement('t-9', 'due_date', { blockId: T, dateValue: '2026-10-09', needsConfirm: true })
+          makeElement('t-9', 'due_date', {
+            blockId: T,
+            dateValue: '2026-10-09',
+            needsConfirm: true
+          })
         ]),
         movingIds,
         selection: { due_date: ['s-10'] }
@@ -237,7 +241,11 @@ describe('planSplit', () => {
   })
 
   it('요소가 하나뿐인 블록은 나눌 것이 없어 아무것도 바꾸지 않는다', () => {
-    const plan = planSplit({ source: block(S, [memo('a', S, 0)]), elementId: 'a', newBlockId: 'new' })
+    const plan = planSplit({
+      source: block(S, [memo('a', S, 0)]),
+      elementId: 'a',
+      newBlockId: 'new'
+    })
 
     expect(plan.createdBlockId).toBeNull()
     expect(plan.moves).toEqual([])
