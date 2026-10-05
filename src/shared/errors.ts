@@ -5,6 +5,7 @@
 export const ERROR_CODES = [
   'BLOCK_NOT_FOUND',
   'ELEMENT_NOT_FOUND',
+  'LABEL_NOT_FOUND',
   /** 요소 종류에 맞지 않거나 형식이 틀린 값 (빈 텍스트, 잘못된 날짜·시간) */
   'ELEMENT_VALUE_INVALID',
   /** 충돌 미리보기 이후 원본·대상 블록이 바뀜. 미리보기를 다시 해야 함 (설계 7.1) */
