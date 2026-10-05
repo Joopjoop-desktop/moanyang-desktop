@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNotNull, isNull, lt } from 'drizzle-orm'
 import type { ElementDeleteReason } from '@shared/model'
 import { blocks, elements } from '../db/schema'
 import type { DomainElement } from '../domain/types'
@@ -56,6 +56,35 @@ export class ElementRepository {
       .where(and(eq(elements.blockId, blockId), isNull(elements.deletedAt)))
       .orderBy(asc(elements.orderIndex))
       .all()
+  }
+
+  /** 하드 딜리트용: 블록들에 속한 요소 ID 전부 (삭제 여부와 상관없이) */
+  findIdsByBlocksIncludingDeleted(blockIds: readonly string[]): string[] {
+    if (blockIds.length === 0) return []
+    return this.db
+      .select({ id: elements.id })
+      .from(elements)
+      .where(inArray(elements.blockId, [...blockIds]))
+      .all()
+      .map((row) => row.id)
+  }
+
+  /** 하드 딜리트 대상: 요소 자신이 삭제된 지 cutoff보다 오래된 요소 (블록 상태와 상관없이) */
+  findExpiredIds(cutoff: string): string[] {
+    return this.db
+      .select({ id: elements.id })
+      .from(elements)
+      .where(and(isNotNull(elements.deletedAt), lt(elements.deletedAt, cutoff)))
+      .all()
+      .map((row) => row.id)
+  }
+
+  deleteByIds(ids: readonly string[]): void {
+    if (ids.length === 0) return
+    this.db
+      .delete(elements)
+      .where(inArray(elements.id, [...ids]))
+      .run()
   }
 
   insert(row: NewElementRow): void {

@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import { history } from '../db/schema'
 import type { DbExecutor } from './executor'
 
@@ -36,6 +36,7 @@ export type HistoryRow = typeof history.$inferSelect
 /**
  * 변경 이력 저장소. 추가 전용이며 수정 메서드를 두지 않는다.
  * 서비스가 변경과 같은 트랜잭션 안에서 record()를 호출한다.
+ * 삭제는 하드 딜리트(deleteForEntities)에서만 한다.
  */
 export class HistoryRepository {
   constructor(
@@ -58,5 +59,17 @@ export class HistoryRepository {
       .where(and(eq(history.entityType, entityType), eq(history.entityId, entityId)))
       .orderBy(asc(history.occurredAt), asc(history.id))
       .all()
+  }
+
+  /**
+   * 하드 딜리트 전용: 지워지는 대상들의 이력을 함께 지운다. (설계 6.4 하드 딜리트)
+   * History는 여러 종류의 대상을 가리켜 외래 키가 없으므로 직접 지워야 한다.
+   */
+  deleteForEntities(entityType: HistoryEntityType, entityIds: readonly string[]): void {
+    if (entityIds.length === 0) return
+    this.db
+      .delete(history)
+      .where(and(eq(history.entityType, entityType), inArray(history.entityId, [...entityIds])))
+      .run()
   }
 }

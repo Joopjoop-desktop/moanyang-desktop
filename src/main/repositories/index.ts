@@ -1,4 +1,5 @@
 import { BlockRepository } from './blockRepository'
+import { CaptureRepository } from './captureRepository'
 import { ElementRepository } from './elementRepository'
 import type { DbExecutor } from './executor'
 import { HistoryRepository } from './historyRepository'
@@ -8,6 +9,7 @@ export type Repositories = {
   blocks: BlockRepository
   elements: ElementRepository
   labels: LabelRepository
+  captures: CaptureRepository
   history: HistoryRepository
 }
 
@@ -20,6 +22,7 @@ export function createRepositories(db: DbExecutor, newId: () => string): Reposit
     blocks: new BlockRepository(db),
     elements: new ElementRepository(db),
     labels: new LabelRepository(db),
+    captures: new CaptureRepository(db),
     history: new HistoryRepository(db, newId)
   }
 }

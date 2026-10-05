@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt } from 'drizzle-orm'
 import type { BlockDeleteReason } from '@shared/model'
 import type { BlockListFilter } from '@shared/views'
 import { blocks } from '../db/schema'
@@ -81,5 +81,24 @@ export class BlockRepository {
 
   restore(id: string, at: string): void {
     this.update(id, { deletedAt: null, deleteReason: null, updatedAt: at })
+  }
+
+  /** 하드 딜리트 대상: 삭제된 지 cutoff보다 오래된 블록 (user, emptied 모두) */
+  findExpiredIds(cutoff: string): string[] {
+    return this.db
+      .select({ id: blocks.id })
+      .from(blocks)
+      .where(and(isNotNull(blocks.deletedAt), lt(blocks.deletedAt, cutoff)))
+      .all()
+      .map((row) => row.id)
+  }
+
+  /** 하드 딜리트. 요소와 라벨 연결은 CASCADE로 함께 지워진다. */
+  deleteByIds(ids: readonly string[]): void {
+    if (ids.length === 0) return
+    this.db
+      .delete(blocks)
+      .where(inArray(blocks.id, [...ids]))
+      .run()
   }
 }
