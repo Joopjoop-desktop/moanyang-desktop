@@ -3,6 +3,9 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import type { DatabaseConnection } from './db/connection'
 import { initDatabase } from './db'
+import { newId } from './infra/id'
+import { nowIso } from './infra/time'
+import { PurgeService } from './services/purgeService'
 
 const APP_USER_MODEL_ID = 'com.joopjoop.desktop'
 
@@ -61,6 +64,14 @@ app.whenReady().then(() => {
     )
     app.quit()
     return
+  }
+
+  // 보관 기간이 지난 데이터 정리. 실패해도 앱 사용에는 지장이 없으므로 기록만 하고 계속한다.
+  try {
+    const purged = new PurgeService({ db: database.db, now: nowIso, newId }).purgeExpired()
+    console.log('[db] purged', purged)
+  } catch (error) {
+    console.error('[db] purge failed', error)
   }
 
   createStudioWindow()

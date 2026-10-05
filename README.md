@@ -44,20 +44,20 @@ npm install
 
 ### 주요 명령어
 
-| 명령어                  | 설명                                         |
-| ----------------------- | -------------------------------------------- |
-| `npm run dev`           | 개발 모드 실행 (핫 리로드). 종료는 `Ctrl+C`  |
-| `npm run start`         | 빌드 결과물로 실행 (배포 빌드 미리보기)      |
-| `npm run build`         | 타입 검사 후 프로덕션 빌드 (`out/`)          |
-| `npm run build:unpack`  | 설치 파일 없이 패키징만 (`dist/win-unpacked`) |
-| `npm run build:win`     | Windows 설치 파일 생성 (`dist/`)             |
-| `npm run test`          | 단위 테스트 1회 실행 (Vitest)                |
-| `npm run test:watch`    | 단위 테스트 감시 모드                        |
-| `npm run lint`          | ESLint 검사 (층 분리 규칙 포함)              |
-| `npm run typecheck`     | 타입 검사 (main·preload / renderer)          |
-| `npm run format`        | Prettier로 전체 포맷 정리                    |
-| `npm run format:check`  | 포맷 검사만                                  |
-| `npm run db:generate`   | 스키마 변경으로 마이그레이션 SQL 생성 (`drizzle/`) |
+| 명령어                 | 설명                                               |
+| ---------------------- | -------------------------------------------------- |
+| `npm run dev`          | 개발 모드 실행 (핫 리로드). 종료는 `Ctrl+C`        |
+| `npm run start`        | 빌드 결과물로 실행 (배포 빌드 미리보기)            |
+| `npm run build`        | 타입 검사 후 프로덕션 빌드 (`out/`)                |
+| `npm run build:unpack` | 설치 파일 없이 패키징만 (`dist/win-unpacked`)      |
+| `npm run build:win`    | Windows 설치 파일 생성 (`dist/`)                   |
+| `npm run test`         | 단위 테스트 1회 실행 (Vitest)                      |
+| `npm run test:watch`   | 단위 테스트 감시 모드                              |
+| `npm run lint`         | ESLint 검사 (층 분리 규칙 포함)                    |
+| `npm run typecheck`    | 타입 검사 (main·preload / renderer)                |
+| `npm run format`       | Prettier로 전체 포맷 정리                          |
+| `npm run format:check` | 포맷 검사만                                        |
+| `npm run db:generate`  | 스키마 변경으로 마이그레이션 SQL 생성 (`drizzle/`) |
 
 E2E 테스트(`test:e2e`) 명령은 해당 기능 구현 시 추가합니다.
 
@@ -65,10 +65,10 @@ E2E 테스트(`test:e2e`) 명령은 해당 기능 구현 시 추가합니다.
 
 **DB 파일 위치**
 
-| 실행 방식 | 경로 |
-| --- | --- |
-| 개발 모드 (`npm run dev`) | 프로젝트의 `data/joopjoop.db` (Git 제외) |
-| 설치된 앱 / `build:unpack` | `%APPDATA%\Joopjoop\joopjoop.db` |
+| 실행 방식                  | 경로                                     |
+| -------------------------- | ---------------------------------------- |
+| 개발 모드 (`npm run dev`)  | 프로젝트의 `data/joopjoop.db` (Git 제외) |
+| 설치된 앱 / `build:unpack` | `%APPDATA%\Joopjoop\joopjoop.db`         |
 
 - 앱이 시작할 때 DB 생성 → 미적용 마이그레이션 실행 → 시스템 라벨 추가가 자동으로 진행됩니다.
 - WAL 모드라 DB 파일 옆에 `-wal`, `-shm` 파일이 함께 생깁니다. 정상입니다.
@@ -96,7 +96,8 @@ E2E 테스트(`test:e2e`) 명령은 해당 기능 구현 시 추가합니다.
 
 - 단위 테스트 파일은 대상 파일 옆에 `*.test.ts`로 둡니다. (예: `src/main/domain/merge.test.ts`)
 - 단위 테스트는 Electron 없이 Node에서 실행됩니다. `domain/`과 `services/`가 주 대상입니다.
-- better-sqlite3는 Electron용으로 빌드되어 있어 일반 Node(Vitest)에서 바로 불러올 수 없습니다. DB를 쓰는 테스트 방식은 저장소·서비스 구현 단계에서 정합니다.
+- `npm run test`는 Vitest를 **Electron의 Node**(`ELECTRON_RUN_AS_NODE`)로 실행합니다(`scripts/run-vitest.mjs`). better-sqlite3가 Electron용으로 빌드되어 있어 일반 Node에서는 불러올 수 없기 때문입니다. `npx vitest`로 직접 실행하면 DB 테스트가 실패합니다.
+- DB가 필요한 테스트는 `createTestDatabase()`(`src/main/db/testDatabase.ts`)로 마이그레이션과 시스템 라벨이 적용된 메모리 DB를 열고, 끝나면 `close()`합니다.
 
 ### 문제 해결
 
@@ -213,13 +214,13 @@ IPC (Controller) → Service → Domain / Repository → DB
 
 ## 개발 팁
 
-| 목적                | 방법                                                                               |
-| ------------------- | ---------------------------------------------------------------------------------- |
-| UI 확인             | 앱 창에서 Chrome 개발자 도구 열기                                                  |
-| 코어 기능 직접 호출 | 개발자 도구 콘솔에서 preload가 노출한 함수 호출                                    |
-| 코어 디버깅         | VS Code 디버거를 메인 프로세스에 연결 (`.vscode/launch.json`)                      |
+| 목적                | 방법                                                                        |
+| ------------------- | --------------------------------------------------------------------------- |
+| UI 확인             | 앱 창에서 Chrome 개발자 도구 열기                                           |
+| 코어 기능 직접 호출 | 개발자 도구 콘솔에서 preload가 노출한 함수 호출                             |
+| 코어 디버깅         | VS Code 디버거를 메인 프로세스에 연결 (`.vscode/launch.json`)               |
 | DB 확인             | DBeaver 읽기 전용 연결로 `data/joopjoop.db` 열기 ([DB 작업](#db-작업) 참고) |
-| IPC 명세 확인       | `src/shared`의 타입 정의                                                           |
+| IPC 명세 확인       | `src/shared`의 타입 정의                                                    |
 
 ---
 

@@ -136,6 +136,7 @@ joopjoop-desktop/
   - `Extractor`: `MockExtractor` → `DirectLlmExtractor`(개발용) → `ServerExtractor`
   - `CalendarProvider`: `MockCalendarProvider` → Google / Outlook
   - `Logger`, `ErrorReporter`, `Analytics`
+  - 저장소(Repository)는 인터페이스 없이 구현 클래스만 둔다. 서비스 테스트를 실제 메모리 DB로 하므로 가짜 저장소가 필요 없다.
 - **도메인 로직은 Electron에 의존하지 않는다.** 단독 테스트 가능, 추후 서버로 이전 가능.
 - **모든 변경은 서비스 계층을 거친다.** 변경과 이력 기록을 같은 트랜잭션에서 처리한다.
 - **트랜잭션은 동기다.** better-sqlite3 + Drizzle 트랜잭션 안에서는 `await`를 쓸 수 없으므로, 트랜잭션 안에는 DB 작업만 둔다. AI 추출 등 비동기 작업은 트랜잭션 밖에서 끝내고 결과 저장만 트랜잭션으로 한다.
@@ -211,16 +212,17 @@ joopjoop-desktop/
 
 - 날짜를 JSON이 아닌 전용 컬럼으로 두는 이유: 캘린더에서 날짜로 조회·정렬하므로 인덱스가 필요하다.
 - AI가 처음 뽑은 값은 History에 남으므로 별도 컬럼을 두지 않는다.
+- 사용자가 날짜 요소를 수정하면 `rawText`를 비우고 `needsConfirm`을 끈다. 원래 표현은 History에 남는다.
 
 #### Label — 상태 라벨
 
-| 필드     | 설명                                         |
-| -------- | -------------------------------------------- |
-| id       | UUID v7                                      |
+| 필드     | 설명                                                                 |
+| -------- | -------------------------------------------------------------------- |
+| id       | UUID v7                                                              |
 | key      | 시스템 라벨 식별자 (예: `waiting_reply`), unique. 사용자 라벨은 null |
-| name     | 예: 조율 중, 회신 대기                       |
-| isSystem | 시스템 제공 여부 (시스템 라벨은 기능과 연결) |
-| groupKey | 같은 그룹 안에서는 하나만 붙음               |
+| name     | 예: 조율 중, 회신 대기                                               |
+| isSystem | 시스템 제공 여부 (시스템 라벨은 기능과 연결)                         |
+| groupKey | 같은 그룹 안에서는 하나만 붙음                                       |
 
 - 코드는 시스템 라벨을 이름이 아닌 `key`로 찾는다. 이름을 바꿔도 기능이 깨지지 않는다.
 - 시스템 라벨 목록은 코드에 두고, **앱 시작 시 `key` 기준으로 없는 라벨만 추가**한다. 이름이 바뀌었으면 갱신한다.
@@ -245,6 +247,26 @@ joopjoop-desktop/
 
 - 수정·삭제하지 않는다. MVP에서는 기록만 하고 실행 취소·이력 화면은 만들지 않는다.
 
+**기록 범위**
+
+- 서비스가 반영하는 변경은 **전부** 기록한다. 도메인 계산 결과(`MovePlan`)에 담긴 자동 정리, 확인 상태 변경, 빈 블록 삭제, 라벨 해제도 포함한다.
+
+  | 변경                                         | action                                             |
+  | -------------------------------------------- | -------------------------------------------------- |
+  | 요소 이동(다른 블록, 같은 블록 안 순서 변경) | `element.moved`                                    |
+  | 요소 버림(자동 정리·충돌 선택)               | `element.discarded`                                |
+  | 확인 상태 변경 등 값 수정                    | `element.updated`                                  |
+  | 빈 블록 삭제                                 | `block.deleted` + 떼어진 라벨마다 `label.detached` |
+  | 분리로 새 블록 생성                          | `block.created`                                    |
+
+- **예외: 다른 요소들의 `orderIndex` 재번호는 기록하지 않는다.** 사용자가 옮긴 요소만 기록한다.
+
+**before / after**
+
+- 바뀐 필드만 기록한다.
+- 생성은 `after`에 전체 값, 삭제·버림은 `before`에 전체 값을 기록한다.
+- 라벨 붙이기·떼기는 `entityType = 'block'`, `entityId = 블록 ID`로 기록하고 `after`/`before`에 `labelId`를 넣는다.
+
 ### 6.3 관계
 
 ```
@@ -262,25 +284,25 @@ Block   N ── M Label   (BlockLabel)
 
 #### 저장 형식
 
-| 값 | 형식 | 예시 |
-|---|---|---|
+| 값                                               | 형식                                           | 예시                       |
+| ------------------------------------------------ | ---------------------------------------------- | -------------------------- |
 | 시각 (`createdAt`, `deletedAt`, `capturedAt` 등) | ISO 8601 문자열, **항상 UTC(`Z`)·밀리초 포함** | `2026-10-04T09:00:00.000Z` |
-| 날짜 요소 `dateValue` | `YYYY-MM-DD` 문자열 (시간대 없는 달력 날짜) | `2026-10-09` |
-| 날짜 요소 `timeValue` | `HH:mm` 문자열 | `11:00` |
-| 참/거짓 (`isSystem`, `needsConfirm`) | SQLite 정수 0/1 (Drizzle boolean 모드) | |
-| History `before` / `after` | JSON 문자열 | |
+| 날짜 요소 `dateValue`                            | `YYYY-MM-DD` 문자열 (시간대 없는 달력 날짜)    | `2026-10-09`               |
+| 날짜 요소 `timeValue`                            | `HH:mm` 문자열                                 | `11:00`                    |
+| 참/거짓 (`isSystem`, `needsConfirm`)             | SQLite 정수 0/1 (Drizzle boolean 모드)         |                            |
+| History `before` / `after`                       | JSON 문자열                                    |                            |
 
 - **시각 문자열은 `new Date().toISOString()`으로만 만든다.** 문자열 순서 정렬이 시간 순서와 같으려면 모든 값이 같은 형식이어야 한다. 시각 생성 함수를 한 곳에 두고 그 함수만 사용한다.
 - `dateValue`·`timeValue`는 사용자가 본 달력상의 날짜·시간이므로 UTC로 바꾸지 않는다.
 
 #### 외래 키와 인덱스
 
-| 관계 | 삭제 시 동작 |
-|---|---|
-| Element.blockId → Block | `ON DELETE CASCADE` (블록을 지우면 요소도 삭제) |
-| BlockLabel.blockId → Block, BlockLabel.labelId → Label | `ON DELETE CASCADE` |
-| Element.captureId → Capture | `ON DELETE SET NULL` (출처 정보만 비우고 요소는 유지) |
-| History | 외래 키 없음 (여러 종류의 대상을 가리킴). 하드 딜리트 코드에서 직접 삭제 |
+| 관계                                                   | 삭제 시 동작                                                             |
+| ------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Element.blockId → Block                                | `ON DELETE CASCADE` (블록을 지우면 요소도 삭제)                          |
+| BlockLabel.blockId → Block, BlockLabel.labelId → Label | `ON DELETE CASCADE`                                                      |
+| Element.captureId → Capture                            | `ON DELETE SET NULL` (출처 정보만 비우고 요소는 유지)                    |
+| History                                                | 외래 키 없음 (여러 종류의 대상을 가리킴). 하드 딜리트 코드에서 직접 삭제 |
 
 - 종류 값(`type`, `status`, `method`, `deleteReason`)은 문자열 컬럼, 허용 값은 TypeScript 타입으로만 제한한다. DB CHECK 제약을 걸지 않는다(종류 추가 시 테이블 재생성 방지).
 - `orderIndex`는 정수. 순서가 바뀌면 그 블록의 요소 번호를 다시 매긴다.
@@ -288,16 +310,23 @@ Block   N ── M Label   (BlockLabel)
 - 인덱스: Element `blockId`, Element `dateValue`, Element `captureId`(Capture 하드 딜리트용), History `(entityType, entityId)`.
 - DB 컬럼 이름은 snake_case (`block_id`), 코드에서는 camelCase (`blockId`).
 
+#### 블록 updatedAt
+
+- 블록 자체(검토·완료·삭제·라벨)나 **그 안의 요소**(추가·수정·삭제·이동)가 바뀌면 블록의 `updatedAt`을 갱신한다. 이동은 원본·대상 블록 모두 갱신한다.
+- 충돌 미리보기 이후 변경 감지에 쓴다. (7.1)
+
 #### 하드 딜리트
+
 앱 시작 시 보관 기간(예: 30일)이 지난 데이터를 지운다.
 
-| 대상 | 조건 | 함께 지워지는 것 |
-|---|---|---|
-| Block | `deletedAt`이 기간 경과 | 요소·라벨 연결(CASCADE), 블록과 그 요소들의 History(코드에서 직접) |
-| Element | 블록이 살아 있어도 요소 자신의 `deletedAt`이 기간 경과 | 그 요소의 History |
-| Capture | 연결된 요소가 없고 `capturedAt`이 기간 경과 (`notTask`, `failed` 등) | — |
+| 대상    | 조건                                                                 | 함께 지워지는 것                                                   |
+| ------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Block   | `deletedAt`이 기간 경과                                              | 요소·라벨 연결(CASCADE), 블록과 그 요소들의 History(코드에서 직접) |
+| Element | 블록이 살아 있어도 요소 자신의 `deletedAt`이 기간 경과               | 그 요소의 History                                                  |
+| Capture | 연결된 요소가 없고 `capturedAt`이 기간 경과 (`notTask`, `failed` 등) | —                                                                  |
 
 #### SQLite 연결 설정
+
 - **외래 키 검사**: SQLite는 기본으로 꺼져 있고 연결마다 초기화되므로, **DB를 열 때마다** `PRAGMA foreign_keys = ON`을 실행한다.
 - **WAL 모드**: `PRAGMA journal_mode = WAL`. 쓰는 중에도 읽기가 막히지 않는다.
 - 이 설정은 DB 연결 코드 한 곳에서만 처리한다.
@@ -323,14 +352,25 @@ Block   N ── M Label   (BlockLabel)
 - 분리로 생긴 새 블록은 기본 상태(검토 전, 미완료, 라벨 없음)로 시작한다.
 
 #### 놓는 위치와 순서
+
 - 요소 하나를 끌어다 놓으면 **놓은 위치**에 끼운다. 위치가 없으면 맨 뒤에 놓는다.
 - 블록 합치기는 대상 블록 **맨 뒤에 원래 순서대로** 붙인다.
 - 순서가 바뀐 블록은 `orderIndex`를 0부터 다시 매긴다. (원본 블록, 대상 블록 모두)
 
 #### 계산과 반영
+
 - 도메인은 "무엇이 바뀌어야 하는지"만 계산하고, 서비스가 그 결과를 DB에 반영하고 History를 기록한다.
 - **충돌 확인(`element:checkConflict`)은 미리보기다.** 아무것도 저장하지 않는다.
 - **실제 이동(`element:move`, `block:merge`)은 사용자 선택을 받아 자동 정리부터 충돌 처리까지 전체를 다시 계산하고, 한 트랜잭션에 한 번에 반영한다.** 선택이 끝나기 전에 일부(예: 자동 정리)만 저장하지 않는다. 취소하면 데이터가 그대로여야 한다.
+- 같은 블록 안 순서 변경은 계산 결과에 옮긴 요소를 명시(`reorders`)해, 서비스가 `element.moved`를 기록할 수 있게 한다.
+
+#### 미리보기 이후 변경 감지
+
+- 선택한 ID가 묶음에 있는지만 보면, 같은 ID의 값이 바뀐 경우(예: 마감일 10/10 → 10/12)를 놓친다.
+- 충돌 미리보기 응답에 **원본·대상 블록의 `updatedAt`** 을 함께 돌려준다.
+- 충돌 선택이 있는 이동 요청은 이 값을 다시 보낸다. 서비스는 현재 값과 다르면 `CONFLICT_PREVIEW_STALE`로 거부하고, UI는 미리보기를 다시 띄운다.
+- 블록 안 요소의 추가·수정·삭제·이동이 모두 블록 `updatedAt`을 갱신하므로(6.4) 이 값 하나로 감지된다.
+- 충돌 선택이 없는 이동은 이 값을 받지 않는다. 그사이 충돌이 생겼으면 `CONFLICT_SELECTION_MISSING`으로 걸러진다.
 
 ### 7.2 같은 종류 요소 충돌
 
@@ -399,12 +439,12 @@ Block   N ── M Label   (BlockLabel)
 - 시스템 라벨은 기능과 연결된다. (이후: 회신 대기 → N일 후 알림, 조율 중 → 가일정 표시)
 - 시스템 라벨 목록:
 
-  | key | 이름 | groupKey |
-  |---|---|---|
-  | `coordinating` | 조율 중 | `progress` |
+  | key             | 이름      | groupKey   |
+  | --------------- | --------- | ---------- |
+  | `coordinating`  | 조율 중   | `progress` |
   | `waiting_reply` | 회신 대기 | `progress` |
-
   - 둘은 같은 그룹이므로 한 블록에 하나만 붙는다.
+
 - **같은 그룹 라벨을 붙이면 기존 라벨을 뗀다.** 사용자가 직접 라벨을 붙이는 행동이므로 "상태는 사용자가 바꿀 때만 바뀐다" 원칙에 맞다. History에 `label.detached`(기존)와 `label.attached`(새 라벨)를 남긴다. `groupKey`가 없는 라벨은 다른 라벨에 영향을 주지 않는다.
 - 이미 붙어 있는 라벨을 다시 붙이면 아무것도 바뀌지 않는다. (`attachedAt` 유지 — "회신 대기 N일째" 계산이 초기화되지 않도록)
 - 사용자 정의 라벨은 구조만 지원하고 화면 기능은 MVP 이후에 연다.
@@ -496,7 +536,7 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 ```
 
 - 코어는 예외를 그대로 던지지 않고 이 형식으로 감싸 반환한다.
-- 에러 코드는 도메인별로 정의한다. 예: `BLOCK_NOT_FOUND`, `ELEMENT_NOT_FOUND`, `CAPTURE_EXTRACT_FAILED`, `INTERRUPTED`
+- 에러 코드는 도메인별로 정의한다(`src/shared/errors.ts`). 예: `BLOCK_NOT_FOUND`, `ELEMENT_NOT_FOUND`, `CAPTURE_EXTRACT_FAILED`, `INTERRUPTED`, `CONFLICT_SELECTION_MISSING`, `CONFLICT_SELECTION_INVALID`, `CONFLICT_SELECTION_EMPTY`, `CONFLICT_PREVIEW_STALE`
 - 사용자에게 보여줄 문구는 UI가 코드 기준으로 결정한다.
 - 정의되지 않은 에러는 `INTERNAL_ERROR`로 반환하고 상세는 로그·에러 수집에만 남긴다.
 
@@ -516,7 +556,7 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 | `element:update`                        | 요소 값 수정                                                                 |
 | `element:delete`                        | 요소 삭제 (마지막 요소면 블록을 `user`로 삭제, 7.3)                          |
 | `element:move`                          | 다른 블록으로 이동, 순서 변경, 또는 새 블록으로 분리. 충돌 시 선택 결과 포함 |
-| `element:checkConflict`                 | 이동 전 같은 종류 요소 충돌 여부 확인                                        |
+| `element:checkConflict`                 | 이동 전 같은 종류 요소 충돌 여부 확인. 원본·대상 블록 `updatedAt` 함께 반환  |
 | `label:list`                            | 라벨 목록                                                                    |
 | `label:attach` / `label:detach`         | 라벨 붙이기 / 떼기                                                           |
 | `schedule:propose` / `schedule:confirm` | 일정 배치안 / 확정 (MVP 목업)                                                |
@@ -558,15 +598,15 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 
 ## 12. 개발 환경
 
-| 목적                          | 방법                                                                  |
-| ----------------------------- | --------------------------------------------------------------------- |
-| 실행                          | 개발 모드 실행(핫 리로드)                                             |
-| UI 확인                       | 앱 창의 Chrome 개발자 도구                                            |
-| 코어 기능 호출 (Postman 대신) | 개발자 도구 콘솔에서 preload 노출 함수 직접 호출                      |
-| 코어 디버깅                   | VS Code 디버거를 메인 프로세스에 연결                                 |
-| DB 확인                       | DBeaver 또는 DB Browser for SQLite로 DB 파일 열기 (수정은 앱 종료 후) |
-| 로직 검증                     | Vitest 단위 테스트 (도메인·서비스)                                    |
-| 명세 확인 (Swagger 대신)      | `src/shared`의 IPC 타입 정의                                          |
+| 목적                          | 방법                                                                                                                                                                       |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 실행                          | 개발 모드 실행(핫 리로드)                                                                                                                                                  |
+| UI 확인                       | 앱 창의 Chrome 개발자 도구                                                                                                                                                 |
+| 코어 기능 호출 (Postman 대신) | 개발자 도구 콘솔에서 preload 노출 함수 직접 호출                                                                                                                           |
+| 코어 디버깅                   | VS Code 디버거를 메인 프로세스에 연결                                                                                                                                      |
+| DB 확인                       | DBeaver 또는 DB Browser for SQLite로 DB 파일 열기 (수정은 앱 종료 후)                                                                                                      |
+| 로직 검증                     | Vitest 단위 테스트 (도메인·서비스). Electron의 Node(`ELECTRON_RUN_AS_NODE`)로 실행해 앱과 같은 better-sqlite3 모듈 사용, 서비스는 마이그레이션이 적용된 메모리 DB로 테스트 |
+| 명세 확인 (Swagger 대신)      | `src/shared`의 IPC 타입 정의                                                                                                                                               |
 
 - better-sqlite3 네이티브 모듈은 `postinstall`에서 Electron 버전에 맞게 리빌드한다 (3.1).
 

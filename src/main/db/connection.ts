@@ -11,12 +11,17 @@ export type DatabaseConnection = {
   close: () => void
 }
 
+/** 파일 없이 메모리에만 여는 DB 경로 (테스트용) */
+export const IN_MEMORY = ':memory:'
+
 /**
  * SQLite DB를 열고 연결 설정을 적용한다. (설계 6.4 SQLite 연결 설정)
  * Electron에 의존하지 않으므로 경로만 넘기면 어디서든 열 수 있다.
  */
 export function openDatabase(filePath: string): DatabaseConnection {
-  mkdirSync(dirname(filePath), { recursive: true })
+  if (filePath !== IN_MEMORY) {
+    mkdirSync(dirname(filePath), { recursive: true })
+  }
 
   const sqlite = new Database(filePath)
   // 외래 키 검사는 연결마다 초기화되므로 열 때마다 켠다.

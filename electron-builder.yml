@@ -6,6 +6,7 @@ files:
   - '!**/.vscode/*'
   - '!src/*'
   - '!docs/*'
+  - '!scripts/**'
   # 개발용 DB와 마이그레이션 원본은 asar에 넣지 않는다 (마이그레이션은 extraResources로 별도 포함)
   - '!data/**'
   - '!drizzle/**'
