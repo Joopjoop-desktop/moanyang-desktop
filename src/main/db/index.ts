@@ -1,13 +1,11 @@
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { openDatabase, type DatabaseConnection } from './connection'
 import { resolveDatabasePath, resolveMigrationsPath } from './paths'
-import { ensureSystemLabels } from './systemLabels'
+import { prepareDatabase } from './prepare'
 
 /**
  * 앱 시작 시 DB를 준비한다.
  * 1. DB 열기 (WAL, 외래 키)
- * 2. 미적용 마이그레이션을 순서대로 실행
- * 3. 시스템 라벨 보장
+ * 2. 미적용 마이그레이션 실행, 시스템 라벨 보장
  */
 export function initDatabase(): DatabaseConnection {
   const dbPath = resolveDatabasePath()
@@ -15,8 +13,7 @@ export function initDatabase(): DatabaseConnection {
 
   const connection = openDatabase(dbPath)
   try {
-    migrate(connection.db, { migrationsFolder })
-    ensureSystemLabels(connection.db)
+    prepareDatabase(connection.db, migrationsFolder)
   } catch (error) {
     connection.close()
     throw error
