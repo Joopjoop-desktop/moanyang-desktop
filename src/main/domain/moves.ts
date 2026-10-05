@@ -1,10 +1,10 @@
 import type { ElementType } from '@shared/model'
+import type { ConflictSelection } from '@shared/moves'
 import { analyzeConflicts, type ConflictGroup } from './conflicts'
 import { DomainError } from './errors'
 import type { DomainElement } from './types'
 
-/** 충돌 묶음(요소 종류)별 "남길 요소 ID 목록" (설계 7.2) */
-export type ConflictSelection = Partial<Record<ElementType, string[]>>
+export type { ConflictSelection }
 
 /** 블록 하나와 그 블록의 살아 있는 요소 */
 export type BlockSnapshot = {
@@ -19,6 +19,8 @@ export type BlockSnapshot = {
 export type MovePlan = {
   /** blockId가 바뀌는 요소 → element.moved */
   moves: { elementId: string; toBlockId: string }[]
+  /** 같은 블록 안에서 사용자가 옮긴 요소 → element.moved (다른 요소의 재번호는 기록하지 않음) */
+  reorders: { elementId: string; blockId: string }[]
   /** 버려지는 요소 (deleteReason = 'discarded') → element.discarded */
   discards: { elementId: string; cause: 'auto' | 'selection' }[]
   /** needsConfirm을 끌 요소 → element.updated */
@@ -34,6 +36,7 @@ export type MovePlan = {
 function emptyPlan(): MovePlan {
   return {
     moves: [],
+    reorders: [],
     discards: [],
     confirms: [],
     orders: [],
@@ -44,6 +47,7 @@ function emptyPlan(): MovePlan {
 
 /**
  * 같은 블록 안에서 요소 하나의 순서를 바꾼다. 충돌 판단을 하지 않는다. (설계 7.1)
+ * 위치가 그대로면 아무것도 바꾸지 않는다.
  * @param toIndex 옮긴 뒤 요소가 놓일 위치 (0부터, 범위를 넘으면 맨 앞/맨 뒤)
  */
 export function planReorder(block: BlockSnapshot, elementId: string, toIndex: number): MovePlan {
@@ -52,9 +56,15 @@ export function planReorder(block: BlockSnapshot, elementId: string, toIndex: nu
   if (from === -1) throw new Error(`planReorder: 블록에 없는 요소입니다 (${elementId})`)
 
   ids.splice(from, 1)
-  ids.splice(clamp(toIndex, 0, ids.length), 0, elementId)
+  const to = clamp(toIndex, 0, ids.length)
+  ids.splice(to, 0, elementId)
+  if (to === from) return emptyPlan()
 
-  return { ...emptyPlan(), orders: [{ blockId: block.blockId, elementIds: ids }] }
+  return {
+    ...emptyPlan(),
+    reorders: [{ elementId, blockId: block.blockId }],
+    orders: [{ blockId: block.blockId, elementIds: ids }]
+  }
 }
 
 export type MoveToBlockInput = {
@@ -111,6 +121,7 @@ export function planMoveToBlock(input: MoveToBlockInput): MovePlan {
 
   return {
     moves: arrivingIds.map((elementId) => ({ elementId, toBlockId: target.blockId })),
+    reorders: [],
     discards: [
       ...[...autoDiscardIds].map((elementId) => ({ elementId, cause: 'auto' as const })),
       ...selectionDiscards.map((elementId) => ({ elementId, cause: 'selection' as const }))

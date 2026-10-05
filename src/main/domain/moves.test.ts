@@ -49,6 +49,16 @@ describe('planReorder', () => {
     expect(plan.discards).toEqual([])
     expect(plan.emptiedBlocks).toEqual([])
   })
+
+  it('옮긴 요소를 reorders에 명시한다 (History 기록용)', () => {
+    expect(planReorder(b, 'c', 0).reorders).toEqual([{ elementId: 'c', blockId: T }])
+  })
+
+  it('위치가 그대로면 아무것도 바꾸지 않는다', () => {
+    const plan = planReorder(b, 'b', 1)
+    expect(plan.reorders).toEqual([])
+    expect(plan.orders).toEqual([])
+  })
 })
 
 describe('planMoveToBlock', () => {
