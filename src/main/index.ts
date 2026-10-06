@@ -1,4 +1,5 @@
-import { app, shell, dialog, BrowserWindow } from 'electron'
+import { app, shell, dialog, ipcMain, BrowserWindow } from 'electron'
+import { IPC_CHANNELS } from '@shared/ipc'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import type { DatabaseConnection } from './db/connection'
@@ -6,6 +7,8 @@ import { initDatabase } from './db'
 import { newId } from './infra/id'
 import { nowIso } from './infra/time'
 import { ElectronChangeNotifier } from './ipc/electronNotifier'
+import { createIpcHandlers } from './ipc/handlers'
+import { registerIpcHandlers } from './ipc/register'
 import { createServices } from './services'
 
 const APP_USER_MODEL_ID = 'com.joopjoop.desktop'
@@ -82,6 +85,8 @@ app.whenReady().then(() => {
   } catch (error) {
     console.error('[db] purge failed', error)
   }
+
+  registerIpcHandlers(ipcMain, createIpcHandlers(services), IPC_CHANNELS)
 
   createStudioWindow()
 })

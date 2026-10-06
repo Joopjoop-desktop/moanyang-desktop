@@ -48,4 +48,5 @@ export type BlockView = {
 }
 
 /** 블록 목록 종류 (block:list) */
-export type BlockListFilter = 'inbox' | 'all' | 'completed' | 'trash'
+export const BLOCK_LIST_FILTERS = ['inbox', 'all', 'completed', 'trash'] as const
+export type BlockListFilter = (typeof BLOCK_LIST_FILTERS)[number]
