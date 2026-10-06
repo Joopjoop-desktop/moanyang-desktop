@@ -5,27 +5,39 @@ import { createTestDatabase } from '../db/testDatabase'
 import { DomainError } from '../domain/errors'
 import { newId } from '../infra/id'
 import { createRepositories, type Repositories } from '../repositories'
-import type { ServiceDeps } from './deps'
+import type { ChangeNotifier, ServiceDeps } from './deps'
 
 /* 테스트 전용: 서비스 테스트 공통 준비. 앱 코드에서 import하지 않는다. */
 
 export const SEED_AT = '2026-10-01T00:00:00.000Z'
 
+/** 가짜 notifier: 알림을 받은 순서대로 기록한다. */
+export class RecordingNotifier implements ChangeNotifier {
+  readonly calls: string[][] = []
+
+  blocksChanged(blockIds: string[]): void {
+    this.calls.push([...blockIds].sort())
+  }
+}
+
 export type ServiceTestContext = {
   connection: DatabaseConnection
   repos: Repositories
   deps: ServiceDeps
+  notifier: RecordingNotifier
 }
 
-/** 메모리 DB와, 호출할 때마다 1초씩 늘어나는 고정 시계를 만든다. */
+/** 메모리 DB, 호출할 때마다 1초씩 늘어나는 고정 시계, 가짜 notifier를 만든다. */
 export function setupServiceTest(): ServiceTestContext {
   const connection = createTestDatabase()
   let tick = 0
   const now = (): string => new Date(Date.UTC(2026, 9, 6, 0, 0, tick++)).toISOString()
+  const notifier = new RecordingNotifier()
   return {
     connection,
     repos: createRepositories(connection.db, newId),
-    deps: { db: connection.db, now, newId }
+    deps: { db: connection.db, now, newId, notifier },
+    notifier
   }
 }
 

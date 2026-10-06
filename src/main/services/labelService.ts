@@ -22,7 +22,7 @@ export class LabelService {
    * @returns 블록에 붙은 라벨
    */
   attach(blockId: string, labelId: string): AttachedLabelView[] {
-    return inTransaction(this.deps, (repos) => {
+    return inTransaction(this.deps, (repos, changes) => {
       assertLiveBlock(repos, blockId)
       const label = repos.labels.findById(labelId)
       if (!label) throw new DomainError('LABEL_NOT_FOUND', `라벨이 없습니다: ${labelId}`)
@@ -59,6 +59,7 @@ export class LabelService {
         at
       )
       repos.blocks.touch(blockId, at)
+      changes.add(blockId)
       return repos.labels.findAttachedToBlock(blockId).map(toAttachedLabelView)
     })
   }
@@ -68,7 +69,7 @@ export class LabelService {
    * @returns 블록에 붙은 라벨
    */
   detach(blockId: string, labelId: string): AttachedLabelView[] {
-    return inTransaction(this.deps, (repos) => {
+    return inTransaction(this.deps, (repos, changes) => {
       assertLiveBlock(repos, blockId)
       const attached = repos.labels.findAttachedToBlock(blockId)
       const current = attached.find((l) => l.id === labelId)
@@ -87,6 +88,7 @@ export class LabelService {
         at
       )
       repos.blocks.touch(blockId, at)
+      changes.add(blockId)
       return repos.labels.findAttachedToBlock(blockId).map(toAttachedLabelView)
     })
   }

@@ -16,6 +16,8 @@ export const ERROR_CODES = [
   'CONFLICT_SELECTION_INVALID',
   /** 충돌 묶음에서 하나도 남기지 않음 */
   'CONFLICT_SELECTION_EMPTY',
+  /** 요청 형식이 계약과 다름 (IPC 입력 검증 실패) */
+  'INVALID_INPUT',
   'INTERNAL_ERROR'
 ] as const
 

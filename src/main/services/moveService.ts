@@ -11,7 +11,7 @@ import {
 import type { Repositories } from '../repositories'
 import type { BlockRow } from '../repositories/blockRepository'
 import { toDomainElement, type ElementRow } from '../repositories/elementRepository'
-import { inTransaction, type ServiceDeps } from './deps'
+import { inTransaction, type ChangeSet, type ServiceDeps } from './deps'
 import { toElementView } from './views'
 
 /** 블록 하나를 읽어 둔 상태 */
@@ -68,23 +68,24 @@ export class MoveService {
 
   /** 같은 블록 안에서 순서를 바꾼다. */
   reorderElement(elementId: string, toIndex: number): MoveResult {
-    return inTransaction(this.deps, (repos) => {
+    return inTransaction(this.deps, (repos, changes) => {
       const element = loadElement(repos, elementId)
       const block = loadBlock(repos, element.blockId)
       const plan = planReorder(block.snapshot, elementId, toIndex)
-      return this.apply(repos, plan, [block])
+      return this.apply(repos, plan, [block], changes)
     })
   }
 
   /** 요소를 다른 블록으로 옮긴다. 같은 블록이면 순서 변경으로 처리한다. */
   moveElementToBlock(input: MoveElementInput): MoveResult {
-    return inTransaction(this.deps, (repos) => {
+    return inTransaction(this.deps, (repos, changes) => {
       const element = loadElement(repos, input.elementId)
       const source = loadBlock(repos, element.blockId)
 
       if (source.row.id === input.targetBlockId) {
         const toIndex = input.insertIndex ?? source.elements.length - 1
-        return this.apply(repos, planReorder(source.snapshot, input.elementId, toIndex), [source])
+        const plan = planReorder(source.snapshot, input.elementId, toIndex)
+        return this.apply(repos, plan, [source], changes)
       }
 
       const target = loadBlock(repos, input.targetBlockId)
@@ -96,7 +97,7 @@ export class MoveService {
         insertIndex: input.insertIndex,
         selection: input.resolution?.selection
       })
-      return this.apply(repos, plan, [source, target])
+      return this.apply(repos, plan, [source, target], changes)
     })
   }
 
@@ -105,7 +106,7 @@ export class MoveService {
     if (input.sourceBlockId === input.targetBlockId) {
       throw new Error('mergeBlocks: 같은 블록끼리는 합칠 수 없습니다')
     }
-    return inTransaction(this.deps, (repos) => {
+    return inTransaction(this.deps, (repos, changes) => {
       const source = loadBlock(repos, input.sourceBlockId)
       const target = loadBlock(repos, input.targetBlockId)
       assertNotStale(source, target, input.resolution)
@@ -115,17 +116,17 @@ export class MoveService {
         movingIds: source.elements.map((e) => e.id),
         selection: input.resolution?.selection
       })
-      return this.apply(repos, plan, [source, target])
+      return this.apply(repos, plan, [source, target], changes)
     })
   }
 
   /** 요소를 빈 곳에 놓아 그 요소만 담은 새 블록을 만든다. */
   splitElement(elementId: string): MoveResult {
-    return inTransaction(this.deps, (repos) => {
+    return inTransaction(this.deps, (repos, changes) => {
       const element = loadElement(repos, elementId)
       const source = loadBlock(repos, element.blockId)
       const plan = planSplit({ source: source.snapshot, elementId, newBlockId: this.deps.newId() })
-      return this.apply(repos, plan, [source])
+      return this.apply(repos, plan, [source], changes)
     })
   }
 
@@ -133,7 +134,12 @@ export class MoveService {
    * MovePlan을 반영하고 History를 남긴다. (설계 6.2 History 기록 범위)
    * 반영 순서: 새 블록 → 이동·순서 변경 → 버림 → 확인 → 순서 재번호 → 빈 블록 삭제 → 블록 updatedAt
    */
-  private apply(repos: Repositories, plan: MovePlan, loaded: LoadedBlock[]): MoveResult {
+  private apply(
+    repos: Repositories,
+    plan: MovePlan,
+    loaded: LoadedBlock[],
+    changes: ChangeSet
+  ): MoveResult {
     const at = this.deps.now()
     const rows = new Map(loaded.flatMap((block) => block.elements).map((row) => [row.id, row]))
     const rowOf = (id: string): ElementRow => {
@@ -261,12 +267,14 @@ export class MoveService {
       if (!emptiedIds.has(blockId)) repos.blocks.touch(blockId, at)
     }
 
-    return {
+    const result: MoveResult = {
       changedBlockIds: plan.createdBlockId
         ? [...changedBlockIds, plan.createdBlockId]
         : changedBlockIds,
       createdBlockId: plan.createdBlockId
     }
+    for (const blockId of result.changedBlockIds) changes.add(blockId)
+    return result
   }
 }
 
