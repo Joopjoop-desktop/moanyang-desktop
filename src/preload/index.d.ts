@@ -1,4 +1,4 @@
-import type { JoopjoopApi } from '@shared/api'
+import type { JoopjoopApi } from '@shared/ipc'
 
 declare global {
   interface Window {
