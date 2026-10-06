@@ -214,13 +214,53 @@ IPC (Controller) → Service → Domain / Repository → DB
 
 ## 개발 팁
 
-| 목적                | 방법                                                                        |
-| ------------------- | --------------------------------------------------------------------------- |
-| UI 확인             | 앱 창에서 Chrome 개발자 도구 열기                                           |
-| 코어 기능 직접 호출 | 개발자 도구 콘솔에서 preload가 노출한 함수 호출                             |
-| 코어 디버깅         | VS Code 디버거를 메인 프로세스에 연결 (`.vscode/launch.json`)               |
-| DB 확인             | DBeaver 읽기 전용 연결로 `data/joopjoop.db` 열기 ([DB 작업](#db-작업) 참고) |
-| IPC 명세 확인       | `src/shared`의 타입 정의                                                    |
+| 목적                | 방법                                                                          |
+| ------------------- | ----------------------------------------------------------------------------- |
+| UI 확인             | 앱 창에서 Chrome 개발자 도구 열기                                             |
+| 코어 기능 직접 호출 | 개발자 도구 콘솔에서 `window.api` 호출 ([아래](#콘솔에서-코어-호출하기) 참고) |
+| 코어 디버깅         | VS Code 디버거를 메인 프로세스에 연결 (`.vscode/launch.json`)                 |
+| DB 확인             | DBeaver 읽기 전용 연결로 `data/joopjoop.db` 열기 ([DB 작업](#db-작업) 참고)   |
+| IPC 명세 확인       | `src/shared/ipc.ts`의 채널 계약                                               |
+
+### 콘솔에서 코어 호출하기
+
+`npm run dev`로 실행한 뒤 앱 창에서 F12로 개발자 도구를 열고 콘솔에 입력합니다. Postman 대신 쓰는 방법입니다.
+
+- 채널 `도메인:동작`은 `window.api.도메인.동작(요청)`으로 부릅니다. (예: `block:list` → `window.api.block.list`)
+- 모든 호출은 `{ ok: true, data }` 또는 `{ ok: false, error: { code, message } }`를 돌려줍니다.
+- 요청·응답 모양은 `src/shared/ipc.ts`의 `IpcContract`를 봅니다.
+
+```js
+// 샘플 블록 만들기 (개발 모드 전용)
+const { data: seeded } = await window.api.dev.seed()
+
+// 변경 이벤트 구독 (데이터가 바뀌면 바뀐 블록 ID가 찍힘)
+const off = window.api.on('blocks:changed', (e) => console.log('changed', e.blockIds))
+
+// 목록 조회: inbox / all / completed / trash
+await window.api.block.list({ filter: 'inbox' })
+
+// 요소 이동: reorder(같은 블록 안) / block(다른 블록) / new(분리)
+const [a, b] = seeded
+await window.api.element.move({ elementId: a.elements[0].id, to: { kind: 'block', blockId: b.id } })
+
+// 블록 합치기: 미리보기 → 충돌이 있으면 남길 요소를 골라 미리보기 결과와 함께 보냄
+const { data: preview } = await window.api.element.checkConflict({
+  kind: 'block',
+  sourceBlockId: seeded[2].id,
+  targetBlockId: seeded[0].id
+})
+const selection = Object.fromEntries(preview.groups.map((g) => [g.type, [g.existing[0].id]]))
+await window.api.block.merge({
+  sourceBlockId: seeded[2].id,
+  targetBlockId: seeded[0].id,
+  resolution: { selection, previewed: preview }
+})
+
+off() // 구독 해제
+```
+
+`dev:seed`의 블록 1과 3은 할 일·마감일·요청자가 겹치도록 만들어 두어, 합치기 충돌 선택을 바로 해볼 수 있습니다.
 
 ---
 

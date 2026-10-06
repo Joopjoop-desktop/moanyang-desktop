@@ -40,10 +40,11 @@ export class BlockService {
 
   /** 휴지통으로 보낸다. 요소와 라벨 연결은 그대로 두어 복구 시 함께 돌아온다. (설계 7.3) */
   delete(blockId: string): void {
-    inTransaction(this.deps, (repos) => {
+    inTransaction(this.deps, (repos, changes) => {
       const row = loadLiveBlock(repos, blockId)
       const at = this.deps.now()
       repos.blocks.softDelete(blockId, 'user', at)
+      changes.add(blockId)
       repos.history.record(
         {
           entityType: 'block',
@@ -59,13 +60,14 @@ export class BlockService {
 
   /** 휴지통에서 복구한다. 사용자가 삭제한 블록만 복구할 수 있다 (emptied는 휴지통에 없음). */
   restore(blockId: string): BlockView {
-    return inTransaction(this.deps, (repos) => {
+    return inTransaction(this.deps, (repos, changes) => {
       const row = repos.blocks.findByIdIncludingDeleted(blockId)
       if (!row || row.deleteReason !== 'user') {
         throw new DomainError('BLOCK_NOT_FOUND', `휴지통에 없는 블록입니다: ${blockId}`)
       }
       const at = this.deps.now()
       repos.blocks.restore(blockId, at)
+      changes.add(blockId)
       repos.history.record(
         {
           entityType: 'block',
@@ -89,7 +91,7 @@ export class BlockService {
       off: 'block.unreviewed' | 'block.reopened'
     }
   ): BlockView {
-    return inTransaction(this.deps, (repos) => {
+    return inTransaction(this.deps, (repos, changes) => {
       const row = loadLiveBlock(repos, blockId)
       if ((row[field] !== null) === on) return buildView(repos, row)
 
@@ -97,6 +99,7 @@ export class BlockService {
       const next = on ? at : null
       const patch = field === 'reviewedAt' ? { reviewedAt: next } : { completedAt: next }
       repos.blocks.update(blockId, { ...patch, updatedAt: at })
+      changes.add(blockId)
       repos.history.record(
         {
           entityType: 'block',

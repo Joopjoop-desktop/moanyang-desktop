@@ -22,7 +22,12 @@ describe('MoveService', () => {
     tick = 0
     // 호출할 때마다 1초씩 늘어나는 고정 시계
     const now = (): string => new Date(Date.UTC(2026, 9, 6, 0, 0, tick++)).toISOString()
-    const deps: ServiceDeps = { db: connection.db, now, newId }
+    const deps: ServiceDeps = {
+      db: connection.db,
+      now,
+      newId,
+      notifier: { blocksChanged: () => {} }
+    }
     service = new MoveService(deps)
   })
 

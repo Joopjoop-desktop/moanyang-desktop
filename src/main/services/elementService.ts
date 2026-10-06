@@ -20,7 +20,7 @@ export class ElementService {
    * 블록 내용은 사용자가 직접 입력하지 않는다는 원칙에 따라 메모만 직접 만들 수 있다. (설계 1.4)
    */
   createMemo(blockId: string, value: string): ElementView {
-    return inTransaction(this.deps, (repos) => {
+    return inTransaction(this.deps, (repos, changes) => {
       const block = repos.blocks.findLiveById(blockId)
       if (!block) throw new DomainError('BLOCK_NOT_FOUND', `블록이 없습니다: ${blockId}`)
       const normalized = normalizeElementUpdate('memo', { value })
@@ -50,6 +50,7 @@ export class ElementService {
         at
       )
       repos.blocks.touch(blockId, at)
+      changes.add(blockId)
       return toElementView(created)
     })
   }
@@ -59,7 +60,7 @@ export class ElementService {
    * 바뀐 값이 없으면 아무것도 바꾸지 않는다.
    */
   update(elementId: string, input: UpdateElementInput): ElementView {
-    return inTransaction(this.deps, (repos) => {
+    return inTransaction(this.deps, (repos, changes) => {
       const row = loadLiveElement(repos, elementId)
       const patch = normalizeElementUpdate(row.type, input)
 
@@ -81,13 +82,14 @@ export class ElementService {
         at
       )
       repos.blocks.touch(row.blockId, at)
+      changes.add(row.blockId)
       return toElementView(loadLiveElement(repos, elementId))
     })
   }
 
   /** 값을 바꾸지 않고 "확인 필요"만 끈다. (설계 6.2) */
   confirm(elementId: string): ElementView {
-    return inTransaction(this.deps, (repos) => {
+    return inTransaction(this.deps, (repos, changes) => {
       const row = loadLiveElement(repos, elementId)
       if (!row.needsConfirm) return toElementView(row)
 
@@ -104,6 +106,7 @@ export class ElementService {
         at
       )
       repos.blocks.touch(row.blockId, at)
+      changes.add(row.blockId)
       return toElementView(loadLiveElement(repos, elementId))
     })
   }
@@ -112,7 +115,7 @@ export class ElementService {
    * 요소를 삭제한다. 마지막 요소면 요소 대신 블록을 user로 삭제한다. (설계 7.3)
    */
   delete(elementId: string): void {
-    inTransaction(this.deps, (repos) => {
+    inTransaction(this.deps, (repos, changes) => {
       const row = loadLiveElement(repos, elementId)
       const blockRow = repos.blocks.findLiveById(row.blockId)
       const elements = repos.elements.findLiveByBlock(row.blockId)
@@ -125,6 +128,7 @@ export class ElementService {
       if (plan.kind === 'block') {
         // 요소는 그대로 두고 블록만 삭제. History는 block.deleted 하나만 남긴다.
         repos.blocks.softDelete(plan.blockId, plan.deleteReason, at)
+        changes.add(plan.blockId)
         repos.history.record(
           {
             entityType: 'block',
@@ -156,6 +160,7 @@ export class ElementService {
         at
       )
       repos.blocks.touch(row.blockId, at)
+      changes.add(row.blockId)
     })
   }
 }

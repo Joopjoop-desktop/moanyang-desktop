@@ -32,6 +32,20 @@ export type ConflictPreview = PreviewStamp & {
   }[]
 }
 
+/** element:move 목적지 (설계 9.3) */
+export type MoveTarget =
+  /** 같은 블록 안 순서 변경. index는 옮긴 뒤 위치 */
+  | { kind: 'reorder'; index: number }
+  /** 다른 블록으로 이동. index는 대상 블록의 현재 요소 기준 위치 (없으면 맨 뒤) */
+  | { kind: 'block'; blockId: string; index?: number; resolution?: ConflictResolution }
+  /** 빈 곳에 놓아 새 블록으로 분리 */
+  | { kind: 'new' }
+
+/** element:checkConflict 입력 (설계 9.3) */
+export type ConflictCheckInput =
+  | { kind: 'element'; elementId: string; targetBlockId: string }
+  | { kind: 'block'; sourceBlockId: string; targetBlockId: string }
+
 /** 이동 결과. UI는 바뀐 블록을 다시 불러온다. */
 export type MoveResult = {
   changedBlockIds: string[]

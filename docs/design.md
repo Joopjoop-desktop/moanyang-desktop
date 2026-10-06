@@ -136,6 +136,7 @@ joopjoop-desktop/
   - `Extractor`: `MockExtractor` → `DirectLlmExtractor`(개발용) → `ServerExtractor`
   - `CalendarProvider`: `MockCalendarProvider` → Google / Outlook
   - `Logger`, `ErrorReporter`, `Analytics`
+  - `ChangeNotifier`: 서비스가 데이터 변경을 알리는 통로. Electron 구현체가 모든 창에 `blocks:changed`를 보내고, 테스트는 가짜 구현으로 검증한다. (9.4)
   - 저장소(Repository)는 인터페이스 없이 구현 클래스만 둔다. 서비스 테스트를 실제 메모리 DB로 하므로 가짜 저장소가 필요 없다.
 - **도메인 로직은 Electron에 의존하지 않는다.** 단독 테스트 가능, 추후 서버로 이전 가능.
 - **모든 변경은 서비스 계층을 거친다.** 변경과 이력 기록을 같은 트랜잭션에서 처리한다.
@@ -528,6 +529,12 @@ type ExtractOutput = {
 - 이름: `도메인:동작`
 - 요청·응답 타입은 `src/shared`에 정의하고 UI와 코어가 공유한다. (Swagger 역할)
 - UI는 preload가 노출한 함수로만 코어를 호출한다.
+- **채널 계약은 `src/shared` 한 곳에 정의한다.** preload 함수와 코어 핸들러 타입이 모두 이 계약에서 나온다. 채널을 추가할 때 계약만 고치면 양쪽 타입이 맞춰진다.
+- `window.api`는 **도메인별 함수**로 노출한다. 예: `window.api.block.list('inbox')`, `window.api.element.move({...})`
+- **입력 검증은 IPC 계층에서 zod로 한다.** UI가 보낸 값은 실행 중에 검사하고, 형식이 틀리면 `INVALID_INPUT`으로 돌려준다.
+- 핸들러는 "입력 → `IpcResult`" 함수로 만들어 Electron 없이 테스트한다. `ipcMain` 등록은 얇게 분리한다.
+- 서비스 조립(composition root)은 한 곳에서 하고, IPC 등록이 이를 받아 쓴다.
+- **개발 모드 전용 채널**(`dev:*`)은 코어가 개발 모드에서만 등록하고, preload도 빌드 시점 값(`import.meta.env.DEV`)으로 개발 빌드에만 포함한다. 배포 빌드에는 코드 자체가 없다.
 
 ### 9.2 공통 응답 형식
 
@@ -536,33 +543,55 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 ```
 
 - 코어는 예외를 그대로 던지지 않고 이 형식으로 감싸 반환한다.
-- 에러 코드는 도메인별로 정의한다(`src/shared/errors.ts`). 예: `BLOCK_NOT_FOUND`, `ELEMENT_NOT_FOUND`, `CAPTURE_EXTRACT_FAILED`, `INTERRUPTED`, `CONFLICT_SELECTION_MISSING`, `CONFLICT_SELECTION_INVALID`, `CONFLICT_SELECTION_EMPTY`, `CONFLICT_PREVIEW_STALE`
+- 에러 코드는 도메인별로 정의한다(`src/shared/errors.ts`). 예: `BLOCK_NOT_FOUND`, `ELEMENT_NOT_FOUND`, `CAPTURE_EXTRACT_FAILED`, `INTERRUPTED`, `CONFLICT_SELECTION_MISSING`, `CONFLICT_SELECTION_INVALID`, `CONFLICT_SELECTION_EMPTY`, `CONFLICT_PREVIEW_STALE`, `ELEMENT_VALUE_INVALID`, `LABEL_NOT_FOUND`, `INVALID_INPUT`
 - 사용자에게 보여줄 문구는 UI가 코드 기준으로 결정한다.
 - 정의되지 않은 에러는 `INTERNAL_ERROR`로 반환하고 상세는 로그·에러 수집에만 남긴다.
+- 변환 규칙: `DomainError`는 코드를 그대로, 입력 검증 실패는 `INVALID_INPUT`, 그 밖의 예외는 `INTERNAL_ERROR`(메시지에 내부 정보를 넣지 않음).
 
 ### 9.3 요청 (UI → 코어)
 
-| 채널                                    | 설명                                                                         |
-| --------------------------------------- | ---------------------------------------------------------------------------- |
-| `capture:submit`                        | 먹이 주기 (텍스트, 방식) → 즉시 응답, 추출은 비동기                          |
-| `capture:retry`                         | 실패한 먹이 다시 시도 (원문이 메모리에 있을 때)                              |
-| `block:list`                            | 목록 조회 (검토함 / 전체 / 완료 / 휴지통)                                    |
-| `block:get`                             | 단건 조회 (요소, 라벨 포함)                                                  |
-| `block:merge`                           | 블록의 모든 요소를 다른 블록으로 이동. 충돌 시 선택 결과 포함                |
-| `block:review`                          | 검토 완료 / 취소                                                             |
-| `block:complete` / `block:reopen`       | 완료 / 되돌리기                                                              |
-| `block:delete` / `block:restore`        | 휴지통 / 복구                                                                |
-| `element:create`                        | 요소 추가 (메모 등 사용자 작성)                                              |
-| `element:update`                        | 요소 값 수정                                                                 |
-| `element:delete`                        | 요소 삭제 (마지막 요소면 블록을 `user`로 삭제, 7.3)                          |
-| `element:move`                          | 다른 블록으로 이동, 순서 변경, 또는 새 블록으로 분리. 충돌 시 선택 결과 포함 |
-| `element:checkConflict`                 | 이동 전 같은 종류 요소 충돌 여부 확인. 원본·대상 블록 `updatedAt` 함께 반환  |
-| `label:list`                            | 라벨 목록                                                                    |
-| `label:attach` / `label:detach`         | 라벨 붙이기 / 떼기                                                           |
-| `schedule:propose` / `schedule:confirm` | 일정 배치안 / 확정 (MVP 목업)                                                |
-| `calendar:list`                         | 기간별 일정 조회 (MVP 목업)                                                  |
-| `settings:get` / `settings:update`      | 설정                                                                         |
-| `window:openStudio`                     | 스튜디오 창 열기                                                             |
+| 채널                                    | 설명                                                                                     |
+| --------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `capture:submit`                        | 먹이 주기 (텍스트, 방식) → 즉시 응답, 추출은 비동기                                      |
+| `capture:retry`                         | 실패한 먹이 다시 시도 (원문이 메모리에 있을 때)                                          |
+| `block:list`                            | 목록 조회 (검토함 / 전체 / 완료 / 휴지통)                                                |
+| `block:get`                             | 단건 조회 (요소, 라벨 포함)                                                              |
+| `block:merge`                           | 블록의 모든 요소를 다른 블록으로 이동. 충돌 시 선택 결과 포함                            |
+| `block:review`                          | 검토 완료 / 취소 (`reviewed: boolean`)                                                   |
+| `block:complete` / `block:reopen`       | 완료 / 되돌리기                                                                          |
+| `block:delete` / `block:restore`        | 휴지통 / 복구                                                                            |
+| `element:create`                        | 메모 추가 (사용자가 직접 만들 수 있는 요소는 메모뿐, 1.4)                                |
+| `element:update`                        | 요소 값 수정                                                                             |
+| `element:confirm`                       | 값을 바꾸지 않고 "확인 필요"만 끄기 (6.2)                                                |
+| `element:delete`                        | 요소 삭제 (마지막 요소면 블록을 `user`로 삭제, 7.3)                                      |
+| `element:move`                          | 요소 이동. 목적지를 `to.kind`로 구분 (아래)                                              |
+| `element:checkConflict`                 | 이동 전 충돌 미리보기. 대상을 `kind`로 구분 (아래). 원본·대상 블록 `updatedAt` 함께 반환 |
+| `dev:seed`                              | 개발 모드 전용: 콘솔 확인용 샘플 블록 생성                                               |
+| `label:list`                            | 라벨 목록                                                                                |
+| `label:attach` / `label:detach`         | 라벨 붙이기 / 떼기                                                                       |
+| `schedule:propose` / `schedule:confirm` | 일정 배치안 / 확정 (MVP 목업)                                                            |
+| `calendar:list`                         | 기간별 일정 조회 (MVP 목업)                                                              |
+| `settings:get` / `settings:update`      | 설정                                                                                     |
+| `window:openStudio`                     | 스튜디오 창 열기                                                                         |
+
+- `capture:*`는 5단계, `schedule:*`·`calendar:*`는 8단계, `settings:*`·`window:openStudio`는 해당 화면을 만들 때 연결한다.
+
+**`element:move` 목적지 (`to`)**
+
+| `kind`    | 값                                 | 의미                                                |
+| --------- | ---------------------------------- | --------------------------------------------------- |
+| `reorder` | `index`                            | 같은 블록 안 순서 변경                              |
+| `block`   | `blockId`, `index?`, `resolution?` | 다른 블록으로 이동. 충돌 선택이 있으면 `resolution` |
+| `new`     | —                                  | 빈 곳에 놓아 새 블록으로 분리                       |
+
+블록 합치기는 `block:merge`(`sourceBlockId`, `targetBlockId`, `resolution?`)를 쓴다.
+
+**`element:checkConflict` 입력**
+
+| `kind`    | 값                               | 의미                              |
+| --------- | -------------------------------- | --------------------------------- |
+| `element` | `elementId`, `targetBlockId`     | 요소 하나를 다른 블록으로 옮길 때 |
+| `block`   | `sourceBlockId`, `targetBlockId` | 블록 합치기                       |
 
 ### 9.4 이벤트 (코어 → UI)
 
@@ -570,7 +599,16 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 | ------------------- | ------------------------------------------------------------------------- |
 | `capture:completed` | 추출 완료 `{ captureId, blockIds }`. 빈 배열이면 할 일 없음 (캐릭터 반응) |
 | `capture:failed`    | 추출 실패                                                                 |
-| `blocks:changed`    | 데이터 변경, 목록 갱신 필요                                               |
+| `blocks:changed`    | 데이터 변경 `{ blockIds }`, 목록 갱신 필요                                |
+
+**`blocks:changed` 발생 규칙**
+
+- **서비스가 트랜잭션 커밋 이후 `ChangeNotifier`로 바뀐 블록 ID를 알린다.** IPC 요청이든 추출 큐든 변경 경로와 상관없이 이벤트가 나간다. IPC 계층은 따로 보내지 않는다.
+- Electron 구현체가 열린 모든 창에 보낸다.
+- 커밋 전에 알리지 않는다. 트랜잭션이 취소되면 알림도 없다.
+- **알림이 실패해도 서비스는 성공으로 끝난다.** 이미 커밋된 변경이므로, Electron 구현체가 에러를 로그만 남긴다.
+- 아무것도 바뀌지 않은 호출(이미 그 상태 등)은 알리지 않는다.
+- 하드 딜리트는 알리지 않는다. 창이 뜨기 전에 실행된다.
 
 ---
 

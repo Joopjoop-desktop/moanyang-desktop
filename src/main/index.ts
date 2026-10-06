@@ -1,11 +1,17 @@
-import { app, shell, dialog, BrowserWindow } from 'electron'
+import { app, shell, dialog, ipcMain, BrowserWindow } from 'electron'
+import { DEV_IPC_CHANNELS, IPC_CHANNELS } from '@shared/ipc'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import type { DatabaseConnection } from './db/connection'
 import { initDatabase } from './db'
 import { newId } from './infra/id'
 import { nowIso } from './infra/time'
-import { PurgeService } from './services/purgeService'
+import { ElectronChangeNotifier } from './ipc/electronNotifier'
+import { createIpcHandlers } from './ipc/handlers'
+import { registerIpcHandlers } from './ipc/register'
+import { createServices } from './services'
+import type { ServiceDeps } from './services/deps'
+import { createDevIpcHandlers } from './dev/handlers'
 
 const APP_USER_MODEL_ID = 'com.joopjoop.desktop'
 
@@ -66,12 +72,30 @@ app.whenReady().then(() => {
     return
   }
 
+  const deps: ServiceDeps = {
+    db: database.db,
+    now: nowIso,
+    newId,
+    notifier: new ElectronChangeNotifier()
+  }
+  const services = createServices(deps)
+
   // 보관 기간이 지난 데이터 정리. 실패해도 앱 사용에는 지장이 없으므로 기록만 하고 계속한다.
+  // 하드 딜리트는 변경 알림을 보내지 않는다 (설계 9.4)
   try {
-    const purged = new PurgeService({ db: database.db, now: nowIso, newId }).purgeExpired()
+    const purged = services.purge.purgeExpired()
     console.log('[db] purged', purged)
   } catch (error) {
     console.error('[db] purge failed', error)
+  }
+
+  // 개발 전용 채널(dev:*)은 개발 빌드에서만 등록한다. preload와 같은 빌드 시점 값을 써서
+  // 배포 빌드에서는 이 분기가 통째로 빠진다 (설계 9.1)
+  if (import.meta.env.DEV) {
+    const handlers = { ...createIpcHandlers(services), ...createDevIpcHandlers(services, deps) }
+    registerIpcHandlers(ipcMain, handlers, [...IPC_CHANNELS, ...DEV_IPC_CHANNELS])
+  } else {
+    registerIpcHandlers(ipcMain, createIpcHandlers(services), IPC_CHANNELS)
   }
 
   createStudioWindow()
