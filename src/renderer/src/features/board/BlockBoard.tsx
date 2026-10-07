@@ -16,6 +16,7 @@ import { describeElement } from '../../lib/display'
 import { useToast } from '../toast/toastContext'
 import { BlockCard } from './BlockCard'
 import styles from './BlockBoard.module.css'
+import { ConflictDialog, type PendingConflict } from './conflict/ConflictDialog'
 import { pickDropTarget } from './dnd/collision'
 import { performDrop } from './dnd/dropActions'
 import { resolveDrop, type DragData, type DropData } from './dnd/dropRules'
@@ -31,6 +32,7 @@ export function BlockBoard({ filter }: { filter: BlockListFilter }): React.JSX.E
   const { data, error } = useBlockList(filter)
   const toast = useToast()
   const [dragging, setDragging] = useState<DragData | null>(null)
+  const [conflict, setConflict] = useState<PendingConflict | null>(null)
   // 6px 이상 움직여야 끌기 시작한다. 그보다 짧으면 클릭(값 편집, 버튼)으로 본다.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -49,8 +51,7 @@ export function BlockBoard({ filter }: { filter: BlockListFilter }): React.JSX.E
     performDrop(intent)
       .then((outcome) => {
         if (outcome.kind === 'needsSelection') {
-          // 충돌 선택 창은 6-6에서 붙인다
-          toast.show({ message: '같은 종류 요소가 겹쳐요. 고르는 창은 아직 준비 중이에요.' })
+          setConflict({ intent: outcome.intent, preview: outcome.preview })
         } else if (outcome.autoDiscarded > 0) {
           toast.show({ message: `값이 같은 요소 ${outcome.autoDiscarded}개는 하나로 정리했어요.` })
         }
@@ -70,6 +71,7 @@ export function BlockBoard({ filter }: { filter: BlockListFilter }): React.JSX.E
       <DragOverlay dropAnimation={null}>
         {dragging && <div className={styles.overlay}>{previewText(dragging, data ?? [])}</div>}
       </DragOverlay>
+      {conflict && <ConflictDialog {...conflict} onClose={() => setConflict(null)} />}
     </DndContext>
   )
 }

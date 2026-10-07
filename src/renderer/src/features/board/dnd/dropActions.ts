@@ -1,12 +1,12 @@
 import type { ConflictCheckInput, ConflictPreview, ConflictResolution } from '@shared/moves'
 import { unwrap } from '../../../api/client'
-import type { DropIntent } from './dropRules'
+import type { DropIntent, MoveIntent } from './dropRules'
 
 export type DropOutcome =
   /** 반영됨. autoDiscarded는 값이 같아 하나로 정리된 요소 수 */
   | { kind: 'done'; autoDiscarded: number }
   /** 같은 종류 요소가 겹쳐 사용자가 골라야 함 (충돌 선택 창, 설계 7.2) */
-  | { kind: 'needsSelection'; intent: DropIntent; preview: ConflictPreview }
+  | { kind: 'needsSelection'; intent: MoveIntent; preview: ConflictPreview }
 
 /**
  * 놓은 동작을 코어에 요청한다. (설계 7.1)
@@ -41,7 +41,7 @@ export async function performDrop(intent: DropIntent): Promise<DropOutcome> {
  * 코어가 자동 정리부터 충돌 처리까지 다시 계산해 한 번에 반영한다. (설계 7.1)
  */
 export async function applyMove(
-  intent: Extract<DropIntent, { kind: 'moveElement' | 'merge' }>,
+  intent: MoveIntent,
   resolution?: ConflictResolution
 ): Promise<void> {
   if (intent.kind === 'merge') {
@@ -63,9 +63,7 @@ export async function applyMove(
 }
 
 /** 이동·합치기 → 충돌 미리보기 요청 */
-export function conflictCheckFor(
-  intent: Extract<DropIntent, { kind: 'moveElement' | 'merge' }>
-): ConflictCheckInput {
+export function conflictCheckFor(intent: MoveIntent): ConflictCheckInput {
   return intent.kind === 'merge'
     ? { kind: 'block', sourceBlockId: intent.sourceBlockId, targetBlockId: intent.targetBlockId }
     : { kind: 'element', elementId: intent.elementId, targetBlockId: intent.targetBlockId }

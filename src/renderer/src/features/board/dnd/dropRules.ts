@@ -26,6 +26,9 @@ export type DropIntent =
   /** 블록 합치기 */
   | { kind: 'merge'; sourceBlockId: string; targetBlockId: string }
 
+/** 다른 블록으로 옮기는 동작. 같은 종류 요소가 겹치면 충돌 선택이 필요하다 */
+export type MoveIntent = Extract<DropIntent, { kind: 'moveElement' | 'merge' }>
+
 /** 아무 변화가 없는 곳에 놓았으면 null */
 export function resolveDrop(
   active: DragData | undefined,
