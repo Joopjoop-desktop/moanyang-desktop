@@ -1,5 +1,6 @@
 import type { UpdateElementInput } from '@shared/elements'
 import type { ElementType } from '@shared/model'
+import { isValidDate, isValidTime } from './calendarValues'
 import { ELEMENT_TYPE_RULES } from './elementRules'
 import { DomainError } from './errors'
 
@@ -7,9 +8,6 @@ import { DomainError } from './errors'
 export type ElementValuePatch =
   | { value: string }
   | { dateValue: string; timeValue: string | null; rawText: null; needsConfirm: false }
-
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
-const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 
 /**
  * 사용자 수정 값을 검사하고 저장할 값으로 바꾼다.
@@ -30,7 +28,7 @@ export function normalizeElementUpdate(
 
   if (!('dateValue' in input)) invalid(`${type}에는 dateValue가 필요합니다`)
   if (!isValidDate(input.dateValue)) invalid(`날짜 형식이 아닙니다: ${input.dateValue}`)
-  if (input.timeValue !== null && !TIME_PATTERN.test(input.timeValue)) {
+  if (input.timeValue !== null && !isValidTime(input.timeValue)) {
     invalid(`시간 형식이 아닙니다: ${input.timeValue}`)
   }
   return {
@@ -39,13 +37,6 @@ export function normalizeElementUpdate(
     rawText: null,
     needsConfirm: false
   }
-}
-
-function isValidDate(value: string): boolean {
-  if (!DATE_PATTERN.test(value)) return false
-  const date = new Date(`${value}T00:00:00Z`)
-  // 2026-02-30처럼 형식만 맞고 없는 날짜를 거른다
-  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value)
 }
 
 function invalid(message: string): never {
