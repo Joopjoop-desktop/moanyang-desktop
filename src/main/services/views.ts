@@ -1,5 +1,7 @@
+import type { CaptureView } from '@shared/captures'
 import type { AttachedLabelView, BlockView, ElementView, LabelView } from '@shared/views'
 import type { BlockRow } from '../repositories/blockRepository'
+import type { CaptureRow } from '../repositories/captureRepository'
 import type { ElementRow } from '../repositories/elementRepository'
 import type { AttachedLabelRow, LabelRow } from '../repositories/labelRepository'
 
@@ -33,6 +35,18 @@ export function toLabelView(row: LabelRow): LabelView {
 
 export function toAttachedLabelView(row: AttachedLabelRow): AttachedLabelView {
   return { ...toLabelView(row), attachedAt: row.attachedAt }
+}
+
+/** canRetry는 원문이 메모리에 있는지에 달려 있어 DB 행에 없다. 추출 큐가 넘겨준다. */
+export function toCaptureView(row: CaptureRow, canRetry: boolean): CaptureView {
+  return {
+    id: row.id,
+    method: row.method,
+    status: row.status,
+    errorCode: row.errorCode,
+    capturedAt: row.capturedAt,
+    canRetry
+  }
 }
 
 export function toBlockView(

@@ -62,7 +62,9 @@ describe('변경 알림', () => {
         notifier: {
           blocksChanged: (): void => {
             throw new Error('window closed')
-          }
+          },
+          captureCompleted: (): void => undefined,
+          captureFailed: (): void => undefined
         }
       }
 
