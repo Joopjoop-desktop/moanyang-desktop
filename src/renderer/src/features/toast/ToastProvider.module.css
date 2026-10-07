@@ -1,0 +1,29 @@
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--color-text);
+  color: var(--color-surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: translateX(-50%);
+}
+
+.action {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-accent-soft);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.action:hover {
+  text-decoration: underline;
+}
