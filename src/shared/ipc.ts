@@ -1,3 +1,4 @@
+import type { CaptureErrorCode } from './captures'
 import type { UpdateElementInput } from './elements'
 import type { ErrorCode } from './errors'
 import type {
@@ -87,6 +88,9 @@ export const ALL_CHANNELS_LISTED: [MissingChannel] extends [never] ? true : Miss
 /** 코어 → UI 이벤트 (설계 9.4) */
 export type IpcEvents = {
   'blocks:changed': { blockIds: string[] }
+  /** 추출 완료. blockIds가 빈 배열이면 할 일 없음 (설계 8.1) */
+  'capture:completed': { captureId: string; blockIds: string[] }
+  'capture:failed': { captureId: string; errorCode: CaptureErrorCode; canRetry: boolean }
 }
 export type IpcEvent = keyof IpcEvents
 
