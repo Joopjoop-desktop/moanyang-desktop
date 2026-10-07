@@ -1,0 +1,58 @@
+.editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dateRow {
+  display: flex;
+  gap: 6px;
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  font: inherit;
+  resize: vertical;
+}
+
+.error {
+  color: var(--color-warn);
+  font-size: 12px;
+}
+
+.buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.primary,
+.secondary {
+  padding: 2px 10px;
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.primary {
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-surface);
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.secondary {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
