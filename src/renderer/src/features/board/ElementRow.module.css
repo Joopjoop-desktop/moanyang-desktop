@@ -1,0 +1,42 @@
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.type {
+  width: 44px;
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.value {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.task {
+  font-weight: 600;
+}
+
+.raw {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.confirm {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-warn-soft);
+  color: var(--color-warn);
+  font-size: 11px;
+}

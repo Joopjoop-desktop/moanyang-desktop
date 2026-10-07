@@ -1,24 +1,19 @@
-import { useBlockList, useFailedCaptures } from './api/queries'
-import { messageForError } from './api/errorMessages'
+import { useState } from 'react'
+import type { BlockListFilter } from '@shared/views'
 import { useCoreEvents } from './api/useCoreEvents'
+import { BlockBoard } from './features/board/BlockBoard'
+import { Sidebar } from './features/board/Sidebar'
 
+/** 스튜디오 창: 왼쪽 탭 + 오른쪽 블록 보드 (설계 9.6) */
 function App(): React.JSX.Element {
   useCoreEvents()
-  // 6-1 확인용 임시 화면: 코어 연결과 이벤트 갱신만 보여준다. 6-2에서 탭·보드로 바꾼다.
-  const inbox = useBlockList('inbox')
-  const failed = useFailedCaptures()
+  const [filter, setFilter] = useState<BlockListFilter>('inbox')
 
   return (
-    <main className="app">
-      <h1>줍줍</h1>
-      {inbox.error ? (
-        <p>{messageForError(inbox.error)}</p>
-      ) : (
-        <p>
-          검토함 {inbox.data?.length ?? '…'}개 · 실패 카드 {failed.data?.length ?? '…'}개
-        </p>
-      )}
-    </main>
+    <div className="app">
+      <Sidebar current={filter} onSelect={setFilter} />
+      <BlockBoard filter={filter} />
+    </div>
   )
 }
 
