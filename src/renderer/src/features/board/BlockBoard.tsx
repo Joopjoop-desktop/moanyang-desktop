@@ -13,6 +13,7 @@ import type { BlockListFilter, BlockView } from '@shared/views'
 import { messageForError } from '../../api/errorMessages'
 import { useBlockList } from '../../api/queries'
 import { describeElement } from '../../lib/display'
+import { CapturePanel } from '../capture/CapturePanel'
 import { useToast } from '../toast/toastContext'
 import { BlockCard } from './BlockCard'
 import styles from './BlockBoard.module.css'
@@ -102,6 +103,7 @@ function BoardSurface({ filter, blocks, error, dragging }: SurfaceProps): React.
         {tab?.label}
         {splitting && <span className={styles.hint}>여기에 놓으면 새 블록으로 나눠요</span>}
       </h2>
+      {filter === 'inbox' && <CapturePanel />}
       {error ? (
         <p className={styles.message}>{messageForError(error)}</p>
       ) : !blocks ? (
