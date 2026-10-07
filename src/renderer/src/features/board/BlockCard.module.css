@@ -9,13 +9,40 @@
   box-shadow: var(--shadow);
 }
 
+/* 다른 블록의 요소·블록을 이 카드에 놓으려 할 때 */
+.target {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-soft);
+}
+
+/* 끌고 있는 블록 원래 자리 */
+.dragging {
+  opacity: 0.4;
+}
+
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
+}
+
+.handle {
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+}
+
+.handle:hover {
+  color: var(--color-text);
 }
 
 .meta {
+  flex: 1;
   color: var(--color-muted);
   font-size: 12px;
 }

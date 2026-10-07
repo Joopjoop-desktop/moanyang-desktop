@@ -2,6 +2,22 @@
   display: flex;
   align-items: baseline;
   gap: 10px;
+  border-top: 2px solid transparent;
+}
+
+.draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+/* 끌고 있는 요소의 원래 자리 */
+.dragging {
+  opacity: 0.4;
+}
+
+/* 다른 블록의 요소가 이 줄 앞에 끼워질 자리 */
+.insertBefore {
+  border-top-color: var(--color-accent);
 }
 
 .type {
