@@ -1,0 +1,51 @@
+.board {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 24px;
+  outline: 2px dashed transparent;
+  outline-offset: -8px;
+}
+
+/* 요소를 빈 곳에 놓으려 할 때 (분리) */
+.splitting {
+  outline-color: var(--color-accent);
+}
+
+.title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 18px;
+}
+
+.hint {
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.message {
+  color: var(--color-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+
+.overlay {
+  max-width: 260px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: grabbing;
+}

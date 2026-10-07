@@ -1,0 +1,108 @@
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  border-top: 2px solid transparent;
+}
+
+.draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+/* 끌고 있는 요소의 원래 자리 */
+.dragging {
+  opacity: 0.4;
+}
+
+/* 다른 블록의 요소가 이 줄 앞에 끼워질 자리 */
+.insertBefore {
+  border-top-color: var(--color-accent);
+}
+
+.type {
+  width: 44px;
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* 값은 눌러서 고치는 버튼이지만 글자처럼 보이게 한다 */
+.value {
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  cursor: text;
+}
+
+.value:hover:not(:disabled) {
+  background: var(--color-hover);
+}
+
+.value:disabled {
+  cursor: default;
+}
+
+.task {
+  font-weight: 600;
+}
+
+.raw {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-warn-soft);
+  color: var(--color-warn);
+  font-size: 11px;
+}
+
+.confirmButton {
+  padding: 0 4px;
+  border: 1px solid var(--color-warn);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-warn);
+  font: inherit;
+  cursor: pointer;
+}
+
+.delete {
+  visibility: hidden;
+  margin-left: auto;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.row:hover .delete {
+  visibility: visible;
+}
+
+.delete:hover {
+  color: var(--color-warn);
+}

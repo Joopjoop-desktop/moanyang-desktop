@@ -1,0 +1,16 @@
+.add {
+  align-self: flex-start;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.add:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
+}
