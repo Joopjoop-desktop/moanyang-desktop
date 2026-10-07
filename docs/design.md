@@ -181,6 +181,7 @@ joopjoop-desktop/
 | capturedAt | 먹인 시각                                                                   |
 
 - **원문 텍스트는 저장하지 않는다.**
+- `sourceApp`은 **코어가 직접** 알아낸다(7단계 오버레이). UI 요청으로 받지 않는다. 그전까지는 null.
 
 #### Block — 요소를 담는 그릇
 
@@ -259,6 +260,7 @@ joopjoop-desktop/
   | 확인 상태 변경 등 값 수정                    | `element.updated`                                  |
   | 빈 블록 삭제                                 | `block.deleted` + 떼어진 라벨마다 `label.detached` |
   | 분리로 새 블록 생성                          | `block.created`                                    |
+  | 추출로 블록·요소 생성 (8.6)                  | `block.created` + 요소마다 `element.created`       |
 
 - **예외: 다른 요소들의 `orderIndex` 재번호는 기록하지 않는다.** 사용자가 옮긴 요소만 기록한다.
 
@@ -325,6 +327,8 @@ Block   N ── M Label   (BlockLabel)
 | Block   | `deletedAt`이 기간 경과                                              | 요소·라벨 연결(CASCADE), 블록과 그 요소들의 History(코드에서 직접) |
 | Element | 블록이 살아 있어도 요소 자신의 `deletedAt`이 기간 경과               | 그 요소의 History                                                  |
 | Capture | 연결된 요소가 없고 `capturedAt`이 기간 경과 (`notTask`, `failed` 등) | —                                                                  |
+
+- 실패 카드를 닫으면(`capture:dismiss`) 그 `failed` Capture는 기간과 상관없이 바로 지운다. 실패한 Capture에는 연결된 요소가 없다(8.6).
 
 #### SQLite 연결 설정
 
@@ -469,17 +473,30 @@ Block   N ── M Label   (BlockLabel)
 1. UI → `capture:submit` (원문 텍스트, 방식)
 2. 코어: Capture 생성(`pending`), 즉시 응답 → 캐릭터 "먹었어요"
 3. 코어: 추출 큐에서 `Extractor` 호출(`extracting`)
-4. 성공 → Block·Element 생성, Capture `done` → `capture:completed { captureId, blockIds }` 이벤트
+4. 성공 → Block·Element 생성, Capture `done` → `blocks:changed`, 이어서 `capture:completed { captureId, blockIds }` 이벤트
    - `notTask: true`이면 블록 없이 `done`, `blockIds`는 빈 배열 → 캐릭터 "할 일이 안 보여요"
-5. 실패 → Capture `failed` → `capture:failed` 이벤트
+5. 실패 → Capture `failed` → `capture:failed { captureId, errorCode, canRetry }` 이벤트
+
+```
+pending ──(큐에서 꺼냄)──▶ extracting ──성공──▶ done
+   ▲                          │
+   └──(자동 재시도 대기)───────┤
+                              └──실패·재시도 초과──▶ failed ──(capture:retry)──▶ pending
+```
+
+- 중간 상태(`pending` → `extracting`) 이벤트는 보내지 않는다. 캐릭터 반응은 submit 응답으로 충분하다.
+- 추출 입력의 `timezone`은 코어가 `Intl.DateTimeFormat().resolvedOptions().timeZone`로 PC 설정을 읽는다.
 
 ### 8.2 원문 처리
 
-- 원문은 **메모리에만** 보관하고 추출이 끝나면 즉시 버린다. DB에 저장하지 않는다.
-- 네트워크 오류 시 앱이 켜져 있는 동안 간격을 두고 **자동 재시도**한다.
-- 처리 중인 먹이가 있을 때 앱을 종료하면 **확인을 받는다.**
-- 계속 실패하면 검토함에 **실패 카드**를 띄우고, 원문이 메모리에 있는 동안 "다시 시도"를 제공한다.
-- **앱 시작 시** `pending`·`extracting` 상태인 Capture는 `failed`, `errorCode = 'INTERRUPTED'`로 바꾼다. 원문이 없으므로 "다시 시도" 없이 "처리하지 못했어요, 다시 먹여주세요" 실패 카드만 보여준다.
+- 원문은 **추출 큐의 메모리에만** 보관한다. DB에 저장하지 않는다.
+  - 성공하면 즉시 지운다.
+  - 실패해도 앱이 켜져 있는 동안은 보관해 "다시 시도"를 할 수 있게 한다. 실패 카드를 닫으면(`capture:dismiss`) 지운다.
+- `capture:submit`은 **20,000자**를 넘는 텍스트를 `INVALID_INPUT`으로 거절한다. 실수로 큰 텍스트를 붙여넣는 경우를 막는다.
+- 네트워크 오류 시 앱이 켜져 있는 동안 간격을 두고 **자동 재시도**한다. (8.7)
+- 처리 중·대기 중인 먹이가 있을 때 앱을 종료하면 **확인을 받는다.**
+- 계속 실패하면 검토함에 **실패 카드**를 띄우고, 원문이 메모리에 있는 동안 "다시 시도"를 제공한다. 실패 카드 목록은 `capture:listFailed`로 조회한다(앱을 다시 켰을 때도 그릴 수 있도록).
+- **앱 시작 시** `pending`·`extracting` 상태인 Capture는 `failed`, `errorCode = 'INTERRUPTED'`로 바꾼다. 원문이 없으므로 "다시 시도" 없이(`canRetry: false`) "처리하지 못했어요, 다시 먹여주세요" 실패 카드만 보여준다.
 
 ### 8.3 입력 형식
 
@@ -520,6 +537,61 @@ type ExtractOutput = {
 - 같은 먹이에서 나온 블록은 검토함에서 나란히 표시한다.
 - 추출 모델은 저렴한 모델로 충분하다(짧은 텍스트에서 정해진 형식 추출).
 
+### 8.5 출력 검증·정리
+
+`Extractor`가 돌려준 값은 코어가 그대로 믿지 않고 zod로 검사한 뒤 정리한다. MockExtractor와 실제 추출기(9단계)에 똑같이 적용한다.
+
+- **구조가 틀리면**(필드 누락, 타입 오류, `schemaVersion` 불일치) 재시도할 수 없는 실패(`CAPTURE_EXTRACT_FAILED`).
+- 글자는 앞뒤 공백을 지우고, 빈 문자열은 null로 바꾼다.
+- **날짜는 형식뿐 아니라 실제로 있는 날짜인지 검사한다.** `YYYY-MM-DD`이고 달력에 있는 날이어야 한다(`2026-02-30`, `2026-13-01`은 틀림).
+- **시간은 `HH:mm`, 00:00 ~ 23:59**.
+- 틀린 날짜는 null로 바꾸고 `ambiguous`를 켠다. `rawText`는 남긴다. 틀린 시간은 버리고 `ambiguous`를 켠다.
+  - 날짜 하나 때문에 할 일·요청자까지 잃지 않도록 먹이 전체를 실패로 만들지 않는다.
+- 날짜가 없는데 시간만 있으면 시간을 버린다.
+- `date`와 `rawText`가 모두 null인 날짜 값은 없는 것(null)으로 본다.
+- 내용이 모두 빈 item은 버린다. 남은 item이 없으면 `notTask`와 같게 처리한다.
+
+### 8.6 결과 반영
+
+- item 하나 = 블록 하나. 요소 순서는 **할 일 → 상세 → 시작일 → 마감일 → 요청자**. 값이 null인 요소는 만들지 않는다.
+- 날짜 요소: `dateValue`가 null이어도 `rawText`가 있으면 만든다(예: "다음주쯤"). 이때 `needsConfirm`을 켠다. 그 밖에는 `needsConfirm = ambiguous`.
+- 요소마다 `captureId`를 넣는다.
+- 먹이 하나에서 나온 **블록 전부와 Capture `done` 변경을 한 트랜잭션**에서 처리한다. 블록이 반만 생기는 일이 없다.
+- History: 블록마다 `block.created`, 요소마다 `element.created`(`after`에 전체 값). AI가 처음 뽑은 값이 여기에 남는다(6.2).
+- 블록은 검토함(`reviewedAt` null)에 들어간다.
+- 커밋 후 `blocks:changed`, 이어서 `capture:completed`를 보낸다. 실패 처리에서는 블록이 생기지 않으므로 실패한 Capture에는 연결된 요소가 없다.
+
+### 8.7 추출 큐와 재시도
+
+- **한 번에 하나씩, 들어온 순서대로** 처리한다.
+- `Extractor`의 실패는 **재시도 가능**(네트워크 등)과 **재시도 불가**(출력 형식 오류 등)로 나눈다.
+- 재시도 가능한 실패는 **최대 3번** 자동 재시도한다. 간격은 **2초, 10초, 30초**.
+  - 기다리는 동안 상태는 `pending`으로 돌려 두고, 큐는 다음 먹이를 먼저 처리한다. 한 먹이가 기다리는 동안 뒤의 먹이가 막히지 않는다.
+  - 재시도 횟수를 넘거나 재시도 불가 실패면 `failed`(`CAPTURE_EXTRACT_FAILED`).
+- **수동 다시 시도**(`capture:retry`)는 `failed` 상태이고 원문이 메모리에 있을 때만 된다. 그 외에는 `CAPTURE_NOT_RETRYABLE`. 재시도 횟수는 처음부터 다시 센다.
+- **중복 처리 방지**
+  - 같은 Capture는 큐에 한 번만 들어간다.
+  - 자동 재시도를 기다리는 동안(`pending`) 들어온 수동 다시 시도는 거절한다.
+  - 다시 시도를 연달아 호출하면 두 번째는 거절한다(첫 호출에서 `pending`이 되므로).
+  - 이미 처리됐거나 닫힌 먹이에 늦게 도착한 재시도 타이머는 아무것도 하지 않는다.
+
+### 8.8 MockExtractor
+
+진짜 AI 대신 규칙으로 동작하는 개발용 추출기. 9단계 전까지 개발·배포 빌드 모두 이것을 쓴다.
+
+- 빈 줄로 나눈 문단 하나 = item 하나. 첫 줄은 할 일, 나머지 줄은 상세.
+- `YYYY-MM-DD` 또는 `YYYY-MM-DD HH:mm`이 있으면 마감일.
+- 특수 표시
+
+  | 표시         | 동작                  |
+  | ------------ | --------------------- |
+  | `[할일없음]` | `notTask`             |
+  | `[실패]`     | 재시도할 수 없는 실패 |
+  | `[네트워크]` | 재시도할 수 있는 실패 |
+  | `[애매]`     | 날짜 `ambiguous` 켜기 |
+
+- 응답 전 지연 시간을 설정할 수 있다. 개발 모드 1.5초(처리 중 상태 확인용), 테스트 0초.
+
 ---
 
 ## 9. IPC 명세
@@ -543,7 +615,7 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 ```
 
 - 코어는 예외를 그대로 던지지 않고 이 형식으로 감싸 반환한다.
-- 에러 코드는 도메인별로 정의한다(`src/shared/errors.ts`). 예: `BLOCK_NOT_FOUND`, `ELEMENT_NOT_FOUND`, `CAPTURE_EXTRACT_FAILED`, `INTERRUPTED`, `CONFLICT_SELECTION_MISSING`, `CONFLICT_SELECTION_INVALID`, `CONFLICT_SELECTION_EMPTY`, `CONFLICT_PREVIEW_STALE`, `ELEMENT_VALUE_INVALID`, `LABEL_NOT_FOUND`, `INVALID_INPUT`
+- 에러 코드는 도메인별로 정의한다(`src/shared/errors.ts`). 예: `BLOCK_NOT_FOUND`, `ELEMENT_NOT_FOUND`, `CAPTURE_EXTRACT_FAILED`, `INTERRUPTED`, `CAPTURE_NOT_FOUND`, `CAPTURE_NOT_RETRYABLE`, `CONFLICT_SELECTION_MISSING`, `CONFLICT_SELECTION_INVALID`, `CONFLICT_SELECTION_EMPTY`, `CONFLICT_PREVIEW_STALE`, `ELEMENT_VALUE_INVALID`, `LABEL_NOT_FOUND`, `INVALID_INPUT`
 - 사용자에게 보여줄 문구는 UI가 코드 기준으로 결정한다.
 - 정의되지 않은 에러는 `INTERNAL_ERROR`로 반환하고 상세는 로그·에러 수집에만 남긴다.
 - 변환 규칙: `DomainError`는 코드를 그대로, 입력 검증 실패는 `INVALID_INPUT`, 그 밖의 예외는 `INTERNAL_ERROR`(메시지에 내부 정보를 넣지 않음).
@@ -554,6 +626,8 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 | --------------------------------------- | ---------------------------------------------------------------------------------------- |
 | `capture:submit`                        | 먹이 주기 (텍스트, 방식) → 즉시 응답, 추출은 비동기                                      |
 | `capture:retry`                         | 실패한 먹이 다시 시도 (원문이 메모리에 있을 때)                                          |
+| `capture:listFailed`                    | 실패 카드 목록 (`canRetry` 포함)                                                         |
+| `capture:dismiss`                       | 실패 카드 닫기 (실패한 Capture 삭제, 메모리 원문 폐기)                                   |
 | `block:list`                            | 목록 조회 (검토함 / 전체 / 완료 / 휴지통)                                                |
 | `block:get`                             | 단건 조회 (요소, 라벨 포함)                                                              |
 | `block:merge`                           | 블록의 모든 요소를 다른 블록으로 이동. 충돌 시 선택 결과 포함                            |
@@ -598,7 +672,7 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 | 채널                | 설명                                                                      |
 | ------------------- | ------------------------------------------------------------------------- |
 | `capture:completed` | 추출 완료 `{ captureId, blockIds }`. 빈 배열이면 할 일 없음 (캐릭터 반응) |
-| `capture:failed`    | 추출 실패                                                                 |
+| `capture:failed`    | 추출 실패 `{ captureId, errorCode, canRetry }`                            |
 | `blocks:changed`    | 데이터 변경 `{ blockIds }`, 목록 갱신 필요                                |
 
 **`blocks:changed` 발생 규칙**
@@ -609,6 +683,12 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 - **알림이 실패해도 서비스는 성공으로 끝난다.** 이미 커밋된 변경이므로, Electron 구현체가 에러를 로그만 남긴다.
 - 아무것도 바뀌지 않은 호출(이미 그 상태 등)은 알리지 않는다.
 - 하드 딜리트는 알리지 않는다. 창이 뜨기 전에 실행된다.
+
+**`capture:*` 이벤트**
+
+- 같은 `ChangeNotifier`가 보낸다(창에 보내는 통로를 하나로 유지).
+- 추출 성공은 `blocks:changed` 다음에 `capture:completed`가 간다. 화면이 목록을 갱신한 뒤 캐릭터가 반응한다.
+- 앱 시작 시 `INTERRUPTED` 처리는 이벤트를 보내지 않는다. 창이 뜬 뒤 `capture:listFailed`로 조회한다.
 
 ---
 

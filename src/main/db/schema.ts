@@ -1,4 +1,5 @@
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import type { CaptureErrorCode } from '@shared/captures'
 import type {
   BlockDeleteReason,
   CaptureMethod,
@@ -20,7 +21,7 @@ export const captures = sqliteTable('captures', {
   method: text('method').$type<CaptureMethod>().notNull(),
   sourceApp: text('source_app'),
   status: text('status').$type<CaptureStatus>().notNull(),
-  errorCode: text('error_code'),
+  errorCode: text('error_code').$type<CaptureErrorCode>(),
   capturedAt: text('captured_at').notNull()
 })
 

@@ -16,6 +16,13 @@ export const ERROR_CODES = [
   'CONFLICT_SELECTION_INVALID',
   /** 충돌 묶음에서 하나도 남기지 않음 */
   'CONFLICT_SELECTION_EMPTY',
+  'CAPTURE_NOT_FOUND',
+  /** 실패 상태가 아니거나(처리 중·자동 재시도 대기 등) 원문이 메모리에 없음 (설계 8.7) */
+  'CAPTURE_NOT_RETRYABLE',
+  /** 추출 실패: 재시도 불가 실패이거나 자동 재시도를 모두 실패함. Capture.errorCode에도 저장 */
+  'CAPTURE_EXTRACT_FAILED',
+  /** 처리 중에 앱이 종료됨. 앱 시작 시 기록. 원문이 없어 다시 시도할 수 없음 (설계 8.2) */
+  'INTERRUPTED',
   /** 요청 형식이 계약과 다름 (IPC 입력 검증 실패) */
   'INVALID_INPUT',
   'INTERNAL_ERROR'

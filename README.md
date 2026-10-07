@@ -262,6 +262,44 @@ off() // 구독 해제
 
 `dev:seed`의 블록 1과 3은 할 일·마감일·요청자가 겹치도록 만들어 두어, 합치기 충돌 선택을 바로 해볼 수 있습니다.
 
+#### 먹이 주기 (추출)
+
+9단계 전까지는 규칙으로 동작하는 `MockExtractor`가 추출합니다. 빈 줄로 나눈 문단 하나가 블록 하나가 되고, 첫 줄은 할 일, 나머지 줄은 상세, `YYYY-MM-DD` 또는 `YYYY-MM-DD HH:mm`은 마감일이 됩니다. 개발 모드에서는 처리 중 상태가 보이도록 1.5초 뒤에 응답합니다.
+
+```js
+// 이벤트 구독: 성공은 blocks:changed → capture:completed 순서, 실패는 capture:failed
+const offDone = window.api.on('capture:completed', (e) => console.log('completed', e))
+const offFail = window.api.on('capture:failed', (e) => console.log('failed', e))
+
+// 먹이 주기: 바로 pending으로 응답하고, 1.5초 뒤 completed 이벤트
+const { data: capture } = await window.api.capture.submit({
+  text: '견적서 송부 2026-10-09 11:00\n단가표 첨부\n\n회의실 예약',
+  method: 'paste'
+})
+await window.api.block.list({ filter: 'inbox' }) // 블록 2개가 늘어남
+
+// 실패해 보기: [실패]는 바로 실패, [네트워크]는 2·10·30초 간격 자동 재시도 후 실패
+const { data: bad } = await window.api.capture.submit({ text: '[실패] 견적서', method: 'paste' })
+// failed 이벤트가 찍힌 뒤에
+await window.api.capture.listFailed() // canRetry: true (원문이 메모리에 있음)
+await window.api.capture.retry({ captureId: bad.id }) // 다시 처리됨 ([실패]라 또 실패)
+await window.api.capture.dismiss({ captureId: bad.id }) // 실패 카드 닫기
+
+offDone()
+offFail()
+```
+
+| 표시         | 동작                                        |
+| ------------ | ------------------------------------------- |
+| `[할일없음]` | 블록 없이 완료 (`blockIds: []`)             |
+| `[실패]`     | 재시도할 수 없는 실패                       |
+| `[네트워크]` | 자동 재시도 3번 후 실패                     |
+| `[애매]`     | 날짜에 "확인 필요"                          |
+| 없는 날짜    | 예: `2026-02-30`. 날짜를 비우고 "확인 필요" |
+
+- 처리 중에 앱 창을 닫으면 확인 창이 뜹니다. 그대로 종료하면 다음 실행 때 그 먹이는 `INTERRUPTED` 실패 카드(`canRetry: false`)가 됩니다.
+- 원문은 메모리에만 있습니다. DB 어디에도 저장되지 않습니다.
+
 ---
 
 ## 협업 규칙

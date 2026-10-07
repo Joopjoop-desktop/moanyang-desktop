@@ -1,15 +1,37 @@
 import type { Services } from '../services'
+import type { ExtractionQueue } from '../services/extractionQueue'
 import type { IpcHandlers } from './router'
 import * as schemas from './schemas'
 
 /**
  * 채널 → 서비스 호출 연결. (설계 9.3)
  * 여기서는 요청 모양을 서비스 인자로 바꾸기만 하고, 규칙은 서비스·도메인에 둔다.
+ * capture:*는 원문을 메모리에 들고 있는 추출 큐로 보낸다.
  */
-export function createIpcHandlers(services: Services): IpcHandlers {
+export function createIpcHandlers(services: Services, queue: ExtractionQueue): IpcHandlers {
   const { blocks, elements, labels, moves } = services
 
   return {
+    'capture:submit': {
+      schema: schemas.captureSubmitRequest,
+      handle: ({ text, method }) => queue.submit(text, method)
+    },
+    'capture:retry': {
+      schema: schemas.captureIdRequest,
+      handle: ({ captureId }) => queue.retry(captureId)
+    },
+    'capture:listFailed': {
+      schema: schemas.noRequest,
+      handle: () => queue.listFailed()
+    },
+    'capture:dismiss': {
+      schema: schemas.captureIdRequest,
+      handle: ({ captureId }) => {
+        queue.dismiss(captureId)
+        return null
+      }
+    },
+
     'block:list': {
       schema: schemas.blockListRequest,
       handle: ({ filter }) => blocks.list(filter)

@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { ELEMENT_TYPES } from '@shared/model'
+import { CAPTURE_TEXT_MAX_LENGTH } from '@shared/captures'
+import { CAPTURE_METHODS, ELEMENT_TYPES } from '@shared/model'
 import { BLOCK_LIST_FILTERS } from '@shared/views'
 
 /**
@@ -10,6 +11,16 @@ import { BLOCK_LIST_FILTERS } from '@shared/views'
 
 const id = z.string().min(1)
 const index = z.number().int().min(0)
+
+/** 원문은 고치지 않고 그대로 넘긴다. 공백뿐이거나 너무 길면 거절 (설계 8.2) */
+export const captureSubmitRequest = z.object({
+  text: z
+    .string()
+    .max(CAPTURE_TEXT_MAX_LENGTH)
+    .refine((text) => text.trim() !== '', '빈 텍스트는 먹일 수 없습니다'),
+  method: z.enum(CAPTURE_METHODS)
+})
+export const captureIdRequest = z.object({ captureId: id })
 
 export const blockIdRequest = z.object({ blockId: id })
 export const elementIdRequest = z.object({ elementId: id })

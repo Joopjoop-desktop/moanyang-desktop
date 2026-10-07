@@ -1,12 +1,15 @@
+import type { IpcEvents } from '@shared/ipc'
 import type { AppDatabase } from '../db/connection'
 import { createRepositories, type Repositories } from '../repositories'
 
 /**
  * 서비스가 데이터 변경을 알리는 통로. (설계 5.2, 9.4)
- * Electron 구현체는 모든 창에 blocks:changed를 보내고, 테스트는 가짜 구현으로 검증한다.
+ * Electron 구현체는 모든 창에 이벤트를 보내고, 테스트는 가짜 구현으로 검증한다.
  */
 export interface ChangeNotifier {
   blocksChanged(blockIds: string[]): void
+  captureCompleted(payload: IpcEvents['capture:completed']): void
+  captureFailed(payload: IpcEvents['capture:failed']): void
 }
 
 /** 서비스가 공통으로 받는 의존성. 테스트에서는 시각을 고정한 now와 가짜 notifier를 넘긴다. */
@@ -37,11 +40,16 @@ export function inTransaction<T>(
   const result = deps.db.transaction((tx) => fn(createRepositories(tx, deps.newId), changes))
 
   if (changes.size > 0) {
-    try {
-      deps.notifier.blocksChanged([...changes])
-    } catch (error) {
-      console.error('[notifier] blocksChanged failed', error)
-    }
+    notifySafely('blocksChanged', () => deps.notifier.blocksChanged([...changes]))
   }
   return result
+}
+
+/** 커밋 뒤의 알림. 실패해도 로그만 남기고 서비스는 성공으로 끝난다. (설계 9.4) */
+export function notifySafely(name: string, send: () => void): void {
+  try {
+    send()
+  } catch (error) {
+    console.error(`[notifier] ${name} failed`, error)
+  }
 }

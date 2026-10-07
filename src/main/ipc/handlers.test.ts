@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { IpcChannel, IpcResponse, IpcResult } from '@shared/ipc'
+import { CAPTURE_TEXT_MAX_LENGTH } from '@shared/captures'
 import { IPC_CHANNELS } from '@shared/ipc'
+import { MockExtractor } from '../extraction/mockExtractor'
 import { createServices } from '../services'
+import { ExtractionQueue } from '../services/extractionQueue'
 import {
   seedBlock,
   seedElement,
@@ -14,10 +17,17 @@ import { handleIpcRequest, type IpcHandlers } from './router'
 describe('IPC 채널 핸들러', () => {
   let ctx: ServiceTestContext
   let handlers: IpcHandlers
+  let queue: ExtractionQueue
 
   beforeEach(() => {
     ctx = setupServiceTest()
-    handlers = createIpcHandlers(createServices(ctx.deps))
+    const services = createServices(ctx.deps)
+    queue = new ExtractionQueue({
+      captures: services.captures,
+      extractor: new MockExtractor(),
+      timezone: 'Asia/Seoul'
+    })
+    handlers = createIpcHandlers(services, queue)
     seedBlock(ctx.repos, 'a')
     seedBlock(ctx.repos, 'b')
     seedElement(ctx.repos, 'a-task', 'a', 'task', 0, { value: '견적서' })
@@ -117,8 +127,65 @@ describe('IPC 채널 핸들러', () => {
     expect((await ok('block:list', { filter: 'trash' })).map((b) => b.id)).toEqual(['a'])
   })
 
+  describe('capture:*', () => {
+    it('capture:submit은 pending으로 응답하고, 추출이 끝나면 검토함에 블록이 생긴다', async () => {
+      const capture = await ok('capture:submit', {
+        text: '견적서 송부 2026-10-09\n\n회의실 예약',
+        method: 'paste'
+      })
+      expect(capture).toMatchObject({ status: 'pending', method: 'paste', canRetry: false })
+
+      await queue.whenIdle()
+
+      const inbox = await ok('block:list', { filter: 'inbox' })
+      expect(inbox).toHaveLength(4)
+      expect(ctx.notifier.events.at(-1)).toMatchObject({
+        event: 'capture:completed',
+        payload: { captureId: capture.id }
+      })
+    })
+
+    it('실패 카드: listFailed → retry → dismiss', async () => {
+      const { id } = await ok('capture:submit', { text: '[실패] 견적서', method: 'drag' })
+      await queue.whenIdle()
+
+      expect(await ok('capture:listFailed', undefined)).toMatchObject([
+        { id, status: 'failed', errorCode: 'CAPTURE_EXTRACT_FAILED', canRetry: true }
+      ])
+
+      expect(await ok('capture:retry', { captureId: id })).toMatchObject({ status: 'pending' })
+      await queue.whenIdle()
+
+      expect(await ok('capture:dismiss', { captureId: id })).toBeNull()
+      expect(await ok('capture:listFailed', undefined)).toEqual([])
+    })
+
+    it('20,000자를 넘는 텍스트는 INVALID_INPUT이고 먹이를 만들지 않는다', async () => {
+      const text = 'a'.repeat(CAPTURE_TEXT_MAX_LENGTH + 1)
+
+      expect(await call('capture:submit', { text, method: 'paste' })).toMatchObject({
+        ok: false,
+        error: { code: 'INVALID_INPUT' }
+      })
+      expect(queue.unfinishedCount()).toBe(0)
+      expect(await ok('capture:submit', { text: text.slice(1), method: 'paste' })).toMatchObject({
+        status: 'pending'
+      })
+      await queue.whenIdle()
+    })
+
+    it('없는 먹이는 CAPTURE_NOT_FOUND', async () => {
+      expect(await call('capture:retry', { captureId: 'nope' })).toMatchObject({
+        ok: false,
+        error: { code: 'CAPTURE_NOT_FOUND' }
+      })
+    })
+  })
+
   describe('입력 검증', () => {
     it.each([
+      ['capture:submit', { text: '  \n ', method: 'paste' }],
+      ['capture:submit', { text: '견적서', method: 'ocr' }],
       ['block:list', { filter: 'everything' }],
       ['block:get', { blockId: '' }],
       ['block:get', undefined],

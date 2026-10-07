@@ -1,4 +1,5 @@
 import { BlockService } from './blockService'
+import { CaptureService } from './captureService'
 import type { ServiceDeps } from './deps'
 import { ElementService } from './elementService'
 import { LabelService } from './labelService'
@@ -7,6 +8,7 @@ import { PurgeService } from './purgeService'
 
 export type Services = {
   blocks: BlockService
+  captures: CaptureService
   elements: ElementService
   labels: LabelService
   moves: MoveService
@@ -17,6 +19,7 @@ export type Services = {
 export function createServices(deps: ServiceDeps): Services {
   return {
     blocks: new BlockService(deps),
+    captures: new CaptureService(deps),
     elements: new ElementService(deps),
     labels: new LabelService(deps),
     moves: new MoveService(deps),

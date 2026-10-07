@@ -1,4 +1,5 @@
 import { expect } from 'vitest'
+import type { IpcEvent, IpcEvents } from '@shared/ipc'
 import type { ElementType } from '@shared/model'
 import type { DatabaseConnection } from '../db/connection'
 import { createTestDatabase } from '../db/testDatabase'
@@ -11,12 +12,30 @@ import type { ChangeNotifier, ServiceDeps } from './deps'
 
 export const SEED_AT = '2026-10-01T00:00:00.000Z'
 
-/** 가짜 notifier: 알림을 받은 순서대로 기록한다. */
+/** 이벤트 이름과 내용 한 쌍. event로 payload 타입이 정해진다. */
+export type RecordedEvent = { [E in IpcEvent]: { event: E; payload: IpcEvents[E] } }[IpcEvent]
+
+/**
+ * 가짜 notifier: 알림을 받은 순서대로 기록한다.
+ * - calls: blocks:changed의 블록 ID 목록만
+ * - events: 모든 이벤트를 보낸 순서대로 (순서 확인용)
+ */
 export class RecordingNotifier implements ChangeNotifier {
   readonly calls: string[][] = []
+  readonly events: RecordedEvent[] = []
 
   blocksChanged(blockIds: string[]): void {
-    this.calls.push([...blockIds].sort())
+    const sorted = [...blockIds].sort()
+    this.calls.push(sorted)
+    this.events.push({ event: 'blocks:changed', payload: { blockIds: sorted } })
+  }
+
+  captureCompleted(payload: IpcEvents['capture:completed']): void {
+    this.events.push({ event: 'capture:completed', payload })
+  }
+
+  captureFailed(payload: IpcEvents['capture:failed']): void {
+    this.events.push({ event: 'capture:failed', payload })
   }
 }
 
