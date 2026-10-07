@@ -16,6 +16,10 @@ import { inTransaction, notifySafely, type ServiceDeps } from './deps'
 export class CaptureService {
   constructor(private readonly deps: ServiceDeps) {}
 
+  find(captureId: string): CaptureRow | undefined {
+    return inTransaction(this.deps, (repos) => repos.captures.findById(captureId))
+  }
+
   /** 먹이를 받는다. pending으로 만든다. sourceApp은 7단계 전까지 null (설계 6.2) */
   create(method: CaptureMethod): CaptureRow {
     return inTransaction(this.deps, (repos) => {
