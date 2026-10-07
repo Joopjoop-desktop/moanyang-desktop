@@ -1,6 +1,7 @@
-import type { CaptureErrorCode } from './captures'
+import type { CaptureErrorCode, CaptureView } from './captures'
 import type { UpdateElementInput } from './elements'
 import type { ErrorCode } from './errors'
+import type { CaptureMethod } from './model'
 import type {
   ConflictCheckInput,
   ConflictPreview,
@@ -23,6 +24,15 @@ export type IpcResult<T> =
 type Contract<Req, Res> = { request: Req; response: Res }
 
 export type IpcContract = {
+  /** 먹이 주기. 바로 pending으로 응답하고 추출은 비동기 (설계 8.1) */
+  'capture:submit': Contract<{ text: string; method: CaptureMethod }, CaptureView>
+  /** 실패한 먹이 다시 시도 (원문이 메모리에 있을 때만) */
+  'capture:retry': Contract<{ captureId: string }, CaptureView>
+  /** 실패 카드 목록 */
+  'capture:listFailed': Contract<void, CaptureView[]>
+  /** 실패 카드 닫기 */
+  'capture:dismiss': Contract<{ captureId: string }, null>
+
   'block:list': Contract<{ filter: BlockListFilter }, BlockView[]>
   'block:get': Contract<{ blockId: string }, BlockView>
   'block:merge': Contract<
@@ -56,6 +66,10 @@ export type IpcResponse<C extends IpcChannel> = IpcContract[C]['response']
 
 /** 배포 빌드에도 있는 채널 */
 export const IPC_CHANNELS = [
+  'capture:submit',
+  'capture:retry',
+  'capture:listFailed',
+  'capture:dismiss',
   'block:list',
   'block:get',
   'block:merge',
