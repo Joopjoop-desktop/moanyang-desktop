@@ -47,6 +47,15 @@ export type BlockView = {
   labels: AttachedLabelView[]
 }
 
+/**
+ * 블록에 빠진 필수 (설계 7.6). 한 블록에 여러 개일 수 있고 이 순서로 나열한다.
+ * - task: 할 일 없음
+ * - date: 날짜 없음 (원래 표현만 있는 날짜는 날짜로 치지 않음)
+ * - dateConfirm: 날짜는 있는데 그중 하나라도 "확인 필요"
+ */
+export const MISSING_ESSENTIALS = ['task', 'date', 'dateConfirm'] as const
+export type MissingEssential = (typeof MISSING_ESSENTIALS)[number]
+
 /** 블록 목록 종류 (block:list) */
 export const BLOCK_LIST_FILTERS = ['inbox', 'all', 'completed', 'trash'] as const
 export type BlockListFilter = (typeof BLOCK_LIST_FILTERS)[number]
