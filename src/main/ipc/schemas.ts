@@ -42,7 +42,16 @@ export const blockMergeRequest = z.object({
   resolution: conflictResolution.optional()
 })
 
-export const elementCreateRequest = z.object({ blockId: id, value: z.string() })
+/** 종류 + 값. 값 모양은 수정과 같고, 종류와 맞는지는 도메인이 검사한다 (설계 7.7) */
+export const elementCreateRequest = z.union([
+  z.object({ blockId: id, type: z.enum(ELEMENT_TYPES), value: z.string() }),
+  z.object({
+    blockId: id,
+    type: z.enum(ELEMENT_TYPES),
+    dateValue: z.string(),
+    timeValue: z.string().nullable()
+  })
+])
 
 /** 텍스트 요소는 value, 날짜 요소는 dateValue + timeValue. 형식 상세 검사는 도메인이 한다. */
 export const elementUpdateRequest = z.union([

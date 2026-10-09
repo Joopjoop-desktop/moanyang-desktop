@@ -127,6 +127,30 @@ describe('IPC 채널 핸들러', () => {
     expect(due).toMatchObject({ dateValue: '2026-10-12', timeValue: '10:00' })
   })
 
+  it('element:create는 종류 + 텍스트 또는 날짜 값을 받는다', async () => {
+    // b에는 마감일만 있다: 할 일은 맨 앞, 요청자는 마감일 뒤
+    const task = await ok('element:create', { blockId: 'b', type: 'task', value: '견적서' })
+    const requester = await ok('element:create', {
+      blockId: 'b',
+      type: 'requester',
+      value: '김과장'
+    })
+    expect(liveIds('b')).toEqual([task.id, 'b-due', requester.id])
+
+    const start = await ok('element:create', {
+      blockId: 'a',
+      type: 'start_date',
+      dateValue: '2026-10-05',
+      timeValue: null
+    })
+    expect(start).toMatchObject({ type: 'start_date', dateValue: '2026-10-05' })
+
+    const unknownType = await call('element:create', { blockId: 'a', type: 'note', value: 'x' })
+    expect(unknownType).toMatchObject({ ok: false, error: { code: 'INVALID_INPUT' } })
+    const exists = await call('element:create', { blockId: 'a', type: 'task', value: 'x' })
+    expect(exists).toMatchObject({ ok: false, error: { code: 'ELEMENT_KIND_EXISTS' } })
+  })
+
   it('block:delete는 null을 돌려주고 블록을 휴지통으로 보낸다', async () => {
     expect(await ok('block:delete', { blockId: 'a' })).toBeNull()
     expect((await ok('block:list', { filter: 'trash' })).map((b) => b.id)).toEqual(['a'])

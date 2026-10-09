@@ -7,7 +7,7 @@ import editorStyles from './ElementEditor.module.css'
 import styles from './MemoComposer.module.css'
 
 /**
- * 블록 아래 "메모 추가". 사용자가 직접 만들 수 있는 요소는 메모뿐이다. (설계 1.4)
+ * 블록 아래 "메모 추가". 모든 종류를 고르는 "+ 추가" 메뉴가 생기면 그것으로 바뀐다. (설계 7.7)
  * Ctrl+Enter로 저장, Esc로 취소.
  */
 export function MemoComposer({ blockId }: { blockId: string }): React.JSX.Element {
@@ -21,7 +21,8 @@ export function MemoComposer({ blockId }: { blockId: string }): React.JSX.Elemen
     setError(null)
   }
   const mutation = useMutation({
-    mutationFn: (value: string) => unwrap(window.api.element.create({ blockId, value })),
+    mutationFn: (value: string) =>
+      unwrap(window.api.element.create({ blockId, type: 'memo', value })),
     onSuccess: close,
     onError: (e) => setError(messageForError(e))
   })

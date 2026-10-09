@@ -1,6 +1,6 @@
 import type { CalendarEntryView } from './calendar'
 import type { CaptureErrorCode, CaptureView } from './captures'
-import type { UpdateElementInput } from './elements'
+import type { CreateElementInput, UpdateElementInput } from './elements'
 import type { ErrorCode } from './errors'
 import type { CaptureMethod } from './model'
 import type {
@@ -48,7 +48,8 @@ export type IpcContract = {
   'block:delete': Contract<{ blockId: string }, null>
   'block:restore': Contract<{ blockId: string }, BlockView>
 
-  'element:create': Contract<{ blockId: string; value: string }, ElementView>
+  /** 요소 추가: 종류 + 값, 정해진 자리에 넣는다 (설계 7.7) */
+  'element:create': Contract<CreateElementInput, ElementView>
   'element:update': Contract<{ elementId: string } & UpdateElementInput, ElementView>
   'element:confirm': Contract<{ elementId: string }, ElementView>
   'element:delete': Contract<{ elementId: string }, null>
