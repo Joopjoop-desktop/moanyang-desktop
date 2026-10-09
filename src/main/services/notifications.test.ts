@@ -64,7 +64,8 @@ describe('변경 알림', () => {
             throw new Error('window closed')
           },
           captureCompleted: (): void => undefined,
-          captureFailed: (): void => undefined
+          captureFailed: (): void => undefined,
+          captureUnfinishedChanged: (): void => undefined
         }
       }
 

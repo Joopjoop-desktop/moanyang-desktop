@@ -10,6 +10,7 @@ export interface ChangeNotifier {
   blocksChanged(blockIds: string[]): void
   captureCompleted(payload: IpcEvents['capture:completed']): void
   captureFailed(payload: IpcEvents['capture:failed']): void
+  captureUnfinishedChanged(payload: IpcEvents['capture:unfinishedChanged']): void
 }
 
 /** 서비스가 공통으로 받는 의존성. 테스트에서는 시각을 고정한 now와 가짜 notifier를 넘긴다. */

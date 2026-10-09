@@ -5,6 +5,7 @@ import { ExtractError } from '../extraction/errors'
 import { parseExtractOutput } from '../extraction/parseOutput'
 import type { ExtractItem, Extractor } from '../extraction/types'
 import type { CaptureService } from './captureService'
+import { notifySafely, type ChangeNotifier } from './deps'
 import { toCaptureView } from './views'
 
 /** 자동 재시도 간격. 길이가 최대 재시도 횟수다. (설계 8.7) */
@@ -15,6 +16,8 @@ export type ExtractionQueueOptions = {
   extractor: Extractor
   /** 예: "Asia/Seoul". 앱에서는 PC 설정을 읽어 넘긴다 (설계 8.1) */
   timezone: string
+  /** 미완료 먹이 수가 바뀌면 알린다 (설계 9.4) */
+  notifier: Pick<ChangeNotifier, 'captureUnfinishedChanged'>
   retryDelaysMs?: readonly number[]
 }
 
@@ -29,12 +32,16 @@ type MemoryEntry = { text: string; capturedAt: string }
  *
  * 중복 처리 방지: 같은 ID는 큐에 한 번만 들어가고, 꺼낼 때 pending → extracting 전환이
  * 성공해야만 처리한다. 상태가 맞지 않는 늦은 재시도나 중복 요청은 그 자리에서 버려진다.
+ *
+ * 미완료 먹이 수(대기 + 처리 중 + 자동 재시도 대기)는 이 큐가 기준이다. 어느 창에서 먹였든,
+ * 수동 다시 시도든 자동 재시도든 수가 실제로 바뀔 때만 capture:unfinishedChanged를 보낸다.
  */
 export class ExtractionQueue {
   private readonly captures: CaptureService
   private readonly extractor: Extractor
   private readonly timezone: string
   private readonly retryDelaysMs: readonly number[]
+  private readonly notifier: Pick<ChangeNotifier, 'captureUnfinishedChanged'>
 
   private readonly memory = new Map<string, MemoryEntry>()
   private readonly waiting: string[] = []
@@ -42,12 +49,15 @@ export class ExtractionQueue {
   private readonly retryTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private current: string | null = null
   private idle: Promise<void> = Promise.resolve()
+  /** 마지막으로 알린 미완료 수. 같은 수는 다시 알리지 않는다 */
+  private announcedCount = 0
 
   constructor(options: ExtractionQueueOptions) {
     this.captures = options.captures
     this.extractor = options.extractor
     this.timezone = options.timezone
     this.retryDelaysMs = options.retryDelaysMs ?? AUTO_RETRY_DELAYS_MS
+    this.notifier = options.notifier
   }
 
   /** 먹이 주기: Capture를 만들고 바로 돌려준다. 추출은 비동기로 이어진다. */
@@ -87,7 +97,10 @@ export class ExtractionQueue {
     this.forget(captureId)
   }
 
-  /** 아직 끝나지 않은 먹이 수(대기 + 처리 중 + 자동 재시도 대기). 앱 종료 확인에 쓴다. */
+  /**
+   * 아직 끝나지 않은 먹이 수(대기 + 처리 중 + 자동 재시도 대기).
+   * 캐릭터 "먹는 중"(capture:unfinishedCount)과 앱 종료 확인에 쓴다.
+   */
   unfinishedCount(): number {
     return this.waiting.length + (this.current === null ? 0 : 1) + this.retryTimers.size
   }
@@ -101,6 +114,7 @@ export class ExtractionQueue {
     if (this.current === captureId || this.waiting.includes(captureId)) return
     this.waiting.push(captureId)
     if (this.current === null && this.waiting.length === 1) this.idle = this.drain()
+    this.announceUnfinished()
   }
 
   private async drain(): Promise<void> {
@@ -112,6 +126,8 @@ export class ExtractionQueue {
         console.error(`[extraction] ${next} 처리 중 오류`, error)
       } finally {
         this.current = null
+        // 다음 먹이를 꺼내도 수는 같으므로, 여기서 알리는 수가 곧 안정된 값이다
+        this.announceUnfinished()
       }
     }
   }
@@ -158,6 +174,7 @@ export class ExtractionQueue {
       const timer = setTimeout(() => {
         this.retryTimers.delete(captureId)
         this.enqueue(captureId)
+        this.announceUnfinished()
       }, this.retryDelaysMs[used])
       this.retryTimers.set(captureId, timer)
       return
@@ -173,5 +190,16 @@ export class ExtractionQueue {
     const timer = this.retryTimers.get(captureId)
     if (timer !== undefined) clearTimeout(timer)
     this.retryTimers.delete(captureId)
+    this.announceUnfinished()
+  }
+
+  /** 미완료 수가 지난번에 알린 수와 다를 때만 알린다 (설계 9.4) */
+  private announceUnfinished(): void {
+    const count = this.unfinishedCount()
+    if (count === this.announcedCount) return
+    this.announcedCount = count
+    notifySafely('captureUnfinishedChanged', () =>
+      this.notifier.captureUnfinishedChanged({ count })
+    )
   }
 }

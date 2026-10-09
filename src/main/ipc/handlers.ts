@@ -3,12 +3,21 @@ import type { ExtractionQueue } from '../services/extractionQueue'
 import type { IpcHandlers } from './router'
 import * as schemas from './schemas'
 
+/** 창 다루기. Electron 창은 앱 시작 코드가 갖고 있어 함수로 받는다 (테스트는 가짜). */
+export type WindowControls = {
+  openStudio: () => void
+}
+
 /**
  * 채널 → 서비스 호출 연결. (설계 9.3)
  * 여기서는 요청 모양을 서비스 인자로 바꾸기만 하고, 규칙은 서비스·도메인에 둔다.
  * capture:*는 원문을 메모리에 들고 있는 추출 큐로 보낸다.
  */
-export function createIpcHandlers(services: Services, queue: ExtractionQueue): IpcHandlers {
+export function createIpcHandlers(
+  services: Services,
+  queue: ExtractionQueue,
+  windows: WindowControls
+): IpcHandlers {
   const { blocks, elements, labels, moves } = services
 
   return {
@@ -30,6 +39,10 @@ export function createIpcHandlers(services: Services, queue: ExtractionQueue): I
         queue.dismiss(captureId)
         return null
       }
+    },
+    'capture:unfinishedCount': {
+      schema: schemas.noRequest,
+      handle: () => ({ count: queue.unfinishedCount() })
     },
 
     'block:list': {
@@ -130,6 +143,14 @@ export function createIpcHandlers(services: Services, queue: ExtractionQueue): I
     'label:detach': {
       schema: schemas.labelLinkRequest,
       handle: ({ blockId, labelId }) => labels.detach(blockId, labelId)
+    },
+
+    'window:openStudio': {
+      schema: schemas.noRequest,
+      handle: () => {
+        windows.openStudio()
+        return null
+      }
     }
   }
 }

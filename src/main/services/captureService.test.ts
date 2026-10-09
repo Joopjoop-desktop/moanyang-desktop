@@ -176,7 +176,8 @@ describe('CaptureService (설계 8장)', () => {
           captureCompleted: (): void => {
             throw new Error('window closed')
           },
-          captureFailed: (): void => undefined
+          captureFailed: (): void => undefined,
+          captureUnfinishedChanged: (): void => undefined
         }
       }
       const id = extracting()

@@ -26,7 +26,12 @@ describe('MoveService', () => {
       db: connection.db,
       now,
       newId,
-      notifier: { blocksChanged: () => {}, captureCompleted: () => {}, captureFailed: () => {} }
+      notifier: {
+        blocksChanged: () => {},
+        captureCompleted: () => {},
+        captureFailed: () => {},
+        captureUnfinishedChanged: () => {}
+      }
     }
     service = new MoveService(deps)
   })

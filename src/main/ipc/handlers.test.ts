@@ -3,7 +3,7 @@ import type { IpcChannel, IpcResponse, IpcResult } from '@shared/ipc'
 import { CAPTURE_TEXT_MAX_LENGTH } from '@shared/captures'
 import { IPC_CHANNELS } from '@shared/ipc'
 import { MockExtractor } from '../extraction/mockExtractor'
-import { createServices } from '../services'
+import { createServices, type Services } from '../services'
 import { ExtractionQueue } from '../services/extractionQueue'
 import {
   seedBlock,
@@ -18,16 +18,20 @@ describe('IPC 채널 핸들러', () => {
   let ctx: ServiceTestContext
   let handlers: IpcHandlers
   let queue: ExtractionQueue
+  let openedStudio: number
+  let services: Services
 
   beforeEach(() => {
     ctx = setupServiceTest()
-    const services = createServices(ctx.deps)
+    services = createServices(ctx.deps)
     queue = new ExtractionQueue({
       captures: services.captures,
       extractor: new MockExtractor(),
-      timezone: 'Asia/Seoul'
+      timezone: 'Asia/Seoul',
+      notifier: ctx.notifier
     })
-    handlers = createIpcHandlers(services, queue)
+    openedStudio = 0
+    handlers = createIpcHandlers(services, queue, { openStudio: () => openedStudio++ })
     seedBlock(ctx.repos, 'a')
     seedBlock(ctx.repos, 'b')
     seedElement(ctx.repos, 'a-task', 'a', 'task', 0, { value: '견적서' })
@@ -139,8 +143,7 @@ describe('IPC 채널 핸들러', () => {
 
       const inbox = await ok('block:list', { filter: 'inbox' })
       expect(inbox).toHaveLength(4)
-      expect(ctx.notifier.events.at(-1)).toMatchObject({
-        event: 'capture:completed',
+      expect(ctx.notifier.events.find((e) => e.event === 'capture:completed')).toMatchObject({
         payload: { captureId: capture.id }
       })
     })
@@ -180,6 +183,33 @@ describe('IPC 채널 핸들러', () => {
         error: { code: 'CAPTURE_NOT_FOUND' }
       })
     })
+  })
+
+  it('capture:unfinishedCount는 대기·처리 중인 먹이 수를 돌려준다', async () => {
+    // 추출이 끝나는 시점을 테스트가 정하도록, 직접 끝내는 추출기를 쓴다
+    let finish: (output: unknown) => void = () => undefined
+    const slowQueue = new ExtractionQueue({
+      captures: services.captures,
+      extractor: { extract: () => new Promise((resolve) => (finish = resolve)) },
+      timezone: 'Asia/Seoul',
+      notifier: ctx.notifier
+    })
+    const slow = createIpcHandlers(services, slowQueue, { openStudio: () => undefined })
+    const count = async (): Promise<unknown> =>
+      handleIpcRequest(slow, 'capture:unfinishedCount', undefined)
+
+    expect(await count()).toEqual({ ok: true, data: { count: 0 } })
+    await handleIpcRequest(slow, 'capture:submit', { text: '견적서 송부', method: 'paste' })
+    expect(await count()).toEqual({ ok: true, data: { count: 1 } })
+
+    finish({ schemaVersion: 1, notTask: true, items: [] })
+    await slowQueue.whenIdle()
+    expect(await count()).toEqual({ ok: true, data: { count: 0 } })
+  })
+
+  it('window:openStudio는 스튜디오를 연다', async () => {
+    expect(await ok('window:openStudio', undefined)).toBeNull()
+    expect(openedStudio).toBe(1)
   })
 
   describe('입력 검증', () => {

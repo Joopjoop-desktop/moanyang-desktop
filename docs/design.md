@@ -181,7 +181,7 @@ joopjoop-desktop/
 | capturedAt | 먹인 시각                                                                   |
 
 - **원문 텍스트는 저장하지 않는다.**
-- `sourceApp`은 **코어가 직접** 알아낸다(7단계 오버레이). UI 요청으로 받지 않는다. 그전까지는 null.
+- `sourceApp`은 **코어가 직접** 알아낸다. UI 요청으로 받지 않는다. 직전 활성 앱 감지는 네이티브 모듈이 필요해 MVP 이후로 미루고(5.3), 그전까지는 null.
 
 #### Block — 요소를 담는 그릇
 
@@ -628,6 +628,7 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 | `capture:retry`                         | 실패한 먹이 다시 시도 (원문이 메모리에 있을 때)                                          |
 | `capture:listFailed`                    | 실패 카드 목록 (`canRetry` 포함)                                                         |
 | `capture:dismiss`                       | 실패 카드 닫기 (실패한 Capture 삭제, 메모리 원문 폐기)                                   |
+| `capture:unfinishedCount`               | 전체 미완료 먹이 수 (대기 + 처리 중 + 자동 재시도 대기)                                  |
 | `block:list`                            | 목록 조회 (검토함 / 전체 / 완료 / 휴지통)                                                |
 | `block:get`                             | 단건 조회 (요소, 라벨 포함)                                                              |
 | `block:merge`                           | 블록의 모든 요소를 다른 블록으로 이동. 충돌 시 선택 결과 포함                            |
@@ -648,7 +649,7 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 | `settings:get` / `settings:update`      | 설정                                                                                     |
 | `window:openStudio`                     | 스튜디오 창 열기                                                                         |
 
-- `capture:*`는 5단계, `schedule:*`·`calendar:*`는 8단계, `settings:*`·`window:openStudio`는 해당 화면을 만들 때 연결한다.
+- `capture:*`는 5단계(`capture:unfinishedCount`는 7단계), `window:openStudio`는 7단계, `schedule:*`·`calendar:*`는 8단계, `settings:*`는 설정 화면을 만들 때 연결한다.
 
 **`element:move` 목적지 (`to`)**
 
@@ -669,11 +670,12 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 
 ### 9.4 이벤트 (코어 → UI)
 
-| 채널                | 설명                                                                      |
-| ------------------- | ------------------------------------------------------------------------- |
-| `capture:completed` | 추출 완료 `{ captureId, blockIds }`. 빈 배열이면 할 일 없음 (캐릭터 반응) |
-| `capture:failed`    | 추출 실패 `{ captureId, errorCode, canRetry }`                            |
-| `blocks:changed`    | 데이터 변경 `{ blockIds }`, 목록 갱신 필요                                |
+| 채널                        | 설명                                                                      |
+| --------------------------- | ------------------------------------------------------------------------- |
+| `capture:completed`         | 추출 완료 `{ captureId, blockIds }`. 빈 배열이면 할 일 없음 (캐릭터 반응) |
+| `capture:failed`            | 추출 실패 `{ captureId, errorCode, canRetry }`                            |
+| `capture:unfinishedChanged` | 미완료 먹이 수 변경 `{ count }` (캐릭터 "먹는 중")                        |
+| `blocks:changed`            | 데이터 변경 `{ blockIds }`, 목록 갱신 필요                                |
 
 **`blocks:changed` 발생 규칙**
 
@@ -689,6 +691,9 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 - 같은 `ChangeNotifier`가 보낸다(창에 보내는 통로를 하나로 유지).
 - 추출 성공은 `blocks:changed` 다음에 `capture:completed`가 간다. 화면이 목록을 갱신한 뒤 캐릭터가 반응한다.
 - 앱 시작 시 `INTERRUPTED` 처리는 이벤트를 보내지 않는다. 창이 뜬 뒤 `capture:listFailed`로 조회한다.
+- **미완료 먹이 수는 추출 큐가 기준이다.** 대기 + 처리 중 + 자동 재시도 대기를 센다. 어느 창에서 먹였든(캐릭터·스튜디오), 수동 다시 시도든 자동 재시도 대기 진입·재개든 같은 수에 반영된다.
+  - 수가 **실제로 바뀔 때만** `capture:unfinishedChanged`를 보낸다.
+  - 창은 처음 뜰 때 `capture:unfinishedCount`로 한 번 조회하고 이후 이벤트로 갱신한다.
 
 ### 9.5 화면(renderer)의 코어 연결
 
@@ -734,6 +739,38 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
   - `CONFLICT_PREVIEW_STALE`이면 미리보기를 다시 받고 "내용이 바뀌어서 다시 확인해 주세요"를 보여준다. 이전 선택은 **ID와 값(`value`, `dateValue`, `timeValue`)이 모두 그대로인 요소만** 유지하고, 값이 바뀌었거나 새로 생긴 요소는 기본값으로 돌아간다. `rawText`는 비교하지 않는다(7.2 같은 값 기준과 동일).
   - 다시 받은 미리보기에 고를 게 없으면(그사이 겹치던 요소가 사라짐) 창을 닫고 그대로 옮긴다. 충돌이 없을 때 바로 옮기는 것과 같다.
 - **테스트**: 화면 쪽 순수 계산(놓은 위치 → api 호출, 충돌 선택 상태, 날짜 표시 형식, 이벤트 → 다시 불러올 목록)만 Vitest로 테스트한다. 컴포넌트를 그리는 테스트는 10단계 E2E로 미룬다.
+
+### 9.7 캐릭터 창과 트레이
+
+- **창 구조**: 창 만들기·보이기는 코어의 `src/main/os/`가 맡는다. 화면 진입점은 `index.html`(스튜디오)과 `overlay.html`(캐릭터) 두 개이고, `api/` 폴더·공유 타입·preload(`window.api`)는 같이 쓴다.
+- **캐릭터 창**: 약 160×160, 투명·테두리 없음·항상 위·작업표시줄에 안 보임·크기 고정. 보일 때 다른 앱의 초점을 뺏지 않는다.
+  - 처음에는 주 모니터 작업 영역 오른쪽 아래. 옮긴 위치는 `userData`의 설정 파일(JSON)에 저장하고, 저장된 위치가 현재 화면 밖이면 기본 위치로 돌린다.
+  - 캐릭터 아래 손잡이 막대로 창을 옮긴다(`-webkit-app-region: drag`). 캐릭터 몸은 먹이 받기·클릭용이다.
+  - 투명 부분의 클릭 통과는 하지 않는다(창을 캐릭터 크기로 작게 유지).
+  - 캐릭터 그림은 CSS·SVG 임시 그림이다. 상태마다 표정만 바꾸고 나중에 이미지로 바꾼다.
+- **먹이 받기**
+  - 다른 앱에서 고른 글을 캐릭터에 놓으면 `method: 'drag'`.
+  - 캐릭터를 클릭하면 "Ctrl+V로 먹이 주기" 말풍선이 뜨고, 그 상태에서 Ctrl+V면 `method: 'paste'`. 클립보드는 붙여넣는 순간의 글만 받고, 코어는 클립보드를 직접 읽지 않는다(11장).
+  - 파일·이미지 등 글이 아니면 받지 않고 "글자만 먹을 수 있어요"로 반응한다.
+- **캐릭터 반응** (이벤트 → 표정은 화면 쪽 순수 함수)
+
+  | 상태    | 언제                                                 | 얼마나        |
+  | ------- | ---------------------------------------------------- | ------------- |
+  | 기본    | 평소                                                 | —             |
+  | 먹는 중 | 미완료 먹이 수가 1 이상                              | 0이 될 때까지 |
+  | 다 먹음 | `capture:completed`에 블록이 있음 ("N개 만들었어요") | 3초           |
+  | 갸우뚱  | `capture:completed`에 블록이 없음 (할 일 없음)       | 3초           |
+  | 시무룩  | `capture:failed`                                     | 3초           |
+
+- 캐릭터 더블클릭은 스튜디오 열기(`window:openStudio`). 먹이가 끝나도 스튜디오를 저절로 띄우지 않는다.
+- **트레이** 메뉴: 스튜디오 열기 / 캐릭터 숨기기·보이기 / 종료. 트레이 아이콘 왼쪽 클릭은 스튜디오 열기.
+- **앱은 하나만 실행한다.** 두 번째로 실행하면 새로 뜨지 않고 기존 스튜디오를 연다(트레이 아이콘이 둘 생기지 않게).
+- **종료 흐름**
+  - 스튜디오 X는 창 숨기기다. 앱은 트레이에 남는다. 캐릭터 창도 Alt+F4 등으로 닫으면 숨기기다(트레이에서 다시 보이기).
+  - 처리 중인 먹이 확인은 `before-quit`에서 한다(8.2).
+  - 종료가 확정되면 "종료 중" 표시를 켜서, 창 숨기기 처리가 실제 종료를 막지 않게 한다. 확인에서 취소하면 표시는 꺼진 채로 남는다.
+- 앱을 켜면 캐릭터와 스튜디오를 둘 다 띄운다.
+- **테스트**: 순수 계산만 한다(이벤트 → 캐릭터 상태, 놓은 데이터에서 글 꺼내기, 저장 위치 화면 안 보정, 미완료 수 변경 알림 시점). 창·트레이는 직접 눌러 보며 확인한다.
 
 ---
 

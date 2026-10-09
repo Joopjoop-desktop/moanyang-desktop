@@ -20,5 +20,8 @@ export function keysToRefresh(event: IpcEvent): QueryKey[] {
       return [queryKeys.blocks]
     case 'capture:failed':
       return [queryKeys.failedCaptures]
+    case 'capture:unfinishedChanged':
+      // 캐릭터 표정용. 스튜디오가 다시 불러올 데이터는 없다
+      return []
   }
 }
