@@ -16,7 +16,9 @@ import { MockExtractor } from './extraction/mockExtractor'
 import { createDevIpcHandlers } from './dev/handlers'
 import { resolveDataDir } from './db/paths'
 import { resolveOverlayPosition } from './os/overlayPosition'
+import { QuitGate } from './os/quitGate'
 import { SettingsFile } from './os/settingsFile'
+import { createTray } from './os/tray'
 import { createOverlayWindow, createStudioWindow, OVERLAY_SIZE } from './os/windows'
 
 const SETTINGS_FILE_NAME = 'settings.json'
@@ -26,20 +28,20 @@ const APP_USER_MODEL_ID = 'com.joopjoop.desktop'
 let database: DatabaseConnection | null = null
 let queue: ExtractionQueue | null = null
 let studio: BrowserWindow | null = null
-/** 종료를 이미 확인받았으면 다시 묻지 않는다 */
-let quitConfirmed = false
+let overlay: BrowserWindow | null = null
+/** 버려지면 트레이 아이콘이 사라지므로 계속 들고 있는다 */
+let tray: ReturnType<typeof createTray> | null = null
 
 /**
  * 처리 중인 먹이가 있으면 종료해도 되는지 묻는다. (설계 8.2)
  * 원문은 메모리에만 있어 종료하면 사라지므로, 다음 실행 때 INTERRUPTED 실패 카드가 된다.
  * @returns 종료해도 되는지
  */
-function confirmQuit(parent?: BrowserWindow): boolean {
-  if (quitConfirmed) return true
+function confirmQuit(): boolean {
   const unfinished = queue?.unfinishedCount() ?? 0
   if (unfinished === 0) return true
 
-  const options: Electron.MessageBoxSyncOptions = {
+  const choice = dialog.showMessageBoxSync({
     type: 'question',
     buttons: ['종료', '취소'],
     defaultId: 1,
@@ -47,28 +49,28 @@ function confirmQuit(parent?: BrowserWindow): boolean {
     title: '줍줍',
     message: `아직 처리 중인 먹이가 ${unfinished}개 있어요.`,
     detail: '지금 종료하면 처리하지 못한 먹이는 다시 먹여 주셔야 해요.'
-  }
-  const choice = parent
-    ? dialog.showMessageBoxSync(parent, options)
-    : dialog.showMessageBoxSync(options)
-  quitConfirmed = choice === 0
-  return quitConfirmed
+  })
+  return choice === 0
 }
 
-/**
- * 창 띄우기. 지금은 스튜디오를 닫으면 앱을 끝낸다(캐릭터 창만 남지 않게).
- * 트레이가 생기면(7-5) 스튜디오 X는 숨기기로 바뀐다.
- */
-function openWindows(): void {
-  const window = createStudioWindow()
-  // 창이 먼저 닫힌 뒤 취소하면 창 없이 앱만 남으므로 닫기 전에 묻는다
-  window.on('close', (event) => {
-    if (!confirmQuit(window)) event.preventDefault()
-  })
-  window.on('closed', () => app.quit())
-  studio = window
+/** 창 X는 숨기기, 종료는 before-quit에서 확인 (설계 9.7) */
+const quitGate = new QuitGate(confirmQuit)
 
-  // 캐릭터 창은 지난번 위치에 띄운다. 그 위치가 지금 화면 밖이면 기본 위치로 (설계 9.7)
+/** X를 눌러도 닫지 않고 숨긴다. 종료 중이면 그대로 닫혀서 종료를 막지 않는다. */
+function hideOnClose(window: BrowserWindow): void {
+  window.on('close', (event) => {
+    if (!quitGate.shouldHideOnClose()) return
+    event.preventDefault()
+    window.hide()
+  })
+}
+
+/** 스튜디오·캐릭터 창과 트레이를 띄운다 (설계 9.7) */
+function openWindows(): void {
+  studio = createStudioWindow()
+  hideOnClose(studio)
+
+  // 캐릭터 창은 지난번 위치에 띄운다. 그 위치가 지금 화면 밖이면 기본 위치로
   const settings = new SettingsFile(join(resolveDataDir(), SETTINGS_FILE_NAME))
   const position = resolveOverlayPosition(
     settings.read().overlay,
@@ -76,10 +78,24 @@ function openWindows(): void {
     screen.getPrimaryDisplay().workArea,
     OVERLAY_SIZE
   )
-  createOverlayWindow(position, (moved) => settings.update({ overlay: moved }))
+  overlay = createOverlayWindow(position, (moved) => settings.update({ overlay: moved }))
+  // 캐릭터 창에 초점이 있을 때 Alt+F4를 눌러도 숨기기로 (트레이에서 다시 보이기)
+  hideOnClose(overlay)
+
+  tray = createTray(
+    { openStudio, toggleOverlay, quit: () => app.quit() },
+    () => overlay?.isVisible() ?? false
+  )
+  // 메뉴 글자(숨기기·보이기)는 캐릭터 창이 실제로 보이거나 숨을 때마다 맞춘다.
+  // 트레이는 캐릭터 창이 화면에 뜨기(ready-to-show) 전에 만들어지므로, 처음 뜰 때도 여기서 맞춰진다.
+  // ready-to-show는 windows.ts가 먼저 등록한 showInactive 다음에 불려서, 처음 뜬 직후에 한 번 더 맞춘다.
+  const refreshTray = (): void => tray?.refresh()
+  overlay.on('ready-to-show', refreshTray)
+  overlay.on('show', refreshTray)
+  overlay.on('hide', refreshTray)
 }
 
-/** 스튜디오를 앞으로 가져온다 (캐릭터 더블클릭, 설계 9.7) */
+/** 스튜디오를 앞으로 가져온다 (캐릭터 더블클릭, 트레이, 설계 9.7) */
 function openStudio(): void {
   if (!studio || studio.isDestroyed()) return
   if (studio.isMinimized()) studio.restore()
@@ -87,7 +103,20 @@ function openStudio(): void {
   studio.focus()
 }
 
+/** 캐릭터 숨기기·보이기 (트레이 메뉴). 보일 때 다른 앱의 초점을 뺏지 않는다. */
+function toggleOverlay(): void {
+  if (!overlay || overlay.isDestroyed()) return
+  if (overlay.isVisible()) overlay.hide()
+  else overlay.showInactive()
+}
+
+// 앱은 하나만 실행한다. 트레이 앱이 둘 뜨면 헷갈리므로, 두 번째 실행은 기존 스튜디오를 연다.
+const isPrimaryInstance = app.requestSingleInstanceLock()
+if (!isPrimaryInstance) app.quit()
+app.on('second-instance', () => openStudio())
+
 app.whenReady().then(() => {
+  if (!isPrimaryInstance) return
   electronApp.setAppUserModelId(APP_USER_MODEL_ID)
 
   // 개발 모드에서 F12로 개발자 도구, 배포 빌드에서 새로고침 단축키 무시
@@ -159,13 +188,12 @@ app.whenReady().then(() => {
   openWindows()
 })
 
-app.on('window-all-closed', () => {
-  app.quit()
-})
+// 창을 모두 닫아도 트레이에 남는다. 이 이벤트를 듣지 않으면 Electron이 앱을 끝낸다.
+app.on('window-all-closed', () => undefined)
 
-// 창 닫기 말고 다른 경로로 종료할 때도 확인한다 (예: 7단계 트레이 메뉴)
+// 트레이 "종료" 등 모든 종료 경로에서 처리 중인 먹이를 확인한다 (설계 8.2, 9.7)
 app.on('before-quit', (event) => {
-  if (!confirmQuit()) event.preventDefault()
+  if (!quitGate.allowQuit()) event.preventDefault()
 })
 
 app.on('will-quit', () => {
