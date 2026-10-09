@@ -1,4 +1,6 @@
+import type { CalendarEntryView } from '@shared/calendar'
 import type { CaptureView } from '@shared/captures'
+import type { BlockCalendar } from '../domain/calendar'
 import type { AttachedLabelView, BlockView, ElementView, LabelView } from '@shared/views'
 import type { BlockRow } from '../repositories/blockRepository'
 import type { CaptureRow } from '../repositories/captureRepository'
@@ -35,6 +37,35 @@ export function toLabelView(row: LabelRow): LabelView {
 
 export function toAttachedLabelView(row: AttachedLabelRow): AttachedLabelView {
   return { ...toLabelView(row), attachedAt: row.attachedAt }
+}
+
+/**
+ * 블록 하나의 달력 표시. (설계 7.5)
+ * 글자는 할 일 → 요청자 → 상세 순으로 처음 있는 값, 없으면 "(할 일 없음)".
+ * elements는 살아 있는 요소, orderIndex 순.
+ */
+export function toCalendarEntryView(
+  block: BlockRow,
+  elements: readonly ElementRow[],
+  calendar: BlockCalendar
+): CalendarEntryView {
+  return {
+    blockId: block.id,
+    title: calendarTitle(elements),
+    completed: block.completedAt !== null,
+    span: calendar.span,
+    marks: calendar.marks.map((mark) => ({ ...mark }))
+  }
+}
+
+const TITLE_TYPES = ['task', 'requester', 'detail'] as const
+
+function calendarTitle(elements: readonly ElementRow[]): string {
+  for (const type of TITLE_TYPES) {
+    const found = elements.find((element) => element.type === type && element.value)
+    if (found?.value) return found.value
+  }
+  return '(할 일 없음)'
 }
 
 /** canRetry는 원문이 메모리에 있는지에 달려 있어 DB 행에 없다. 추출 큐가 넘겨준다. */

@@ -18,7 +18,7 @@ export function createIpcHandlers(
   queue: ExtractionQueue,
   windows: WindowControls
 ): IpcHandlers {
-  const { blocks, elements, labels, moves } = services
+  const { blocks, calendar, elements, labels, moves } = services
 
   return {
     'capture:submit': {
@@ -143,6 +143,11 @@ export function createIpcHandlers(
     'label:detach': {
       schema: schemas.labelLinkRequest,
       handle: ({ blockId, labelId }) => labels.detach(blockId, labelId)
+    },
+
+    'calendar:list': {
+      schema: schemas.calendarListRequest,
+      handle: ({ from, to }) => calendar.list(from, to)
     },
 
     'window:openStudio': {

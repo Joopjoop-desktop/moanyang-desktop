@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull, lt } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm'
 import type { ElementDeleteReason } from '@shared/model'
 import { blocks, elements } from '../db/schema'
 import type { DomainElement } from '../domain/types'
@@ -39,6 +39,26 @@ export class ElementRepository {
       .where(and(eq(elements.id, id), LIVE))
       .get()
     return row?.element
+  }
+
+  /**
+   * 달력 후보: 살아 있는 시작일·마감일 중 가장 이른 날짜 ≤ to 이고 가장 늦은 날짜 ≥ from인 블록. (설계 7.5)
+   * 조회 기간 안에 날짜가 없어도 기간을 가로지르는 블록까지 잡도록 넓게 고른다.
+   * 실제로 겹치는지는 서비스가 도메인 계산(overlapsRange)으로 다시 거른다.
+   * 날짜 없이 원래 표현만 있는 요소(dateValue null)는 보지 않는다.
+   */
+  findBlockIdsWithDatesAround(from: string, to: string): string[] {
+    return this.db
+      .select({ blockId: elements.blockId })
+      .from(elements)
+      .innerJoin(blocks, eq(elements.blockId, blocks.id))
+      .where(
+        and(LIVE, inArray(elements.type, ['start_date', 'due_date']), isNotNull(elements.dateValue))
+      )
+      .groupBy(elements.blockId)
+      .having(sql`min(${elements.dateValue}) <= ${to} and max(${elements.dateValue}) >= ${from}`)
+      .all()
+      .map((row) => row.blockId)
   }
 
   findByIdIncludingDeleted(id: string): ElementRow | undefined {
