@@ -1,6 +1,6 @@
 import type { CalendarEntryView } from './calendar'
 import type { CaptureErrorCode, CaptureView } from './captures'
-import type { UpdateElementInput } from './elements'
+import type { CreateElementInput, UpdateElementInput } from './elements'
 import type { ErrorCode } from './errors'
 import type { CaptureMethod } from './model'
 import type {
@@ -48,7 +48,8 @@ export type IpcContract = {
   'block:delete': Contract<{ blockId: string }, null>
   'block:restore': Contract<{ blockId: string }, BlockView>
 
-  'element:create': Contract<{ blockId: string; value: string }, ElementView>
+  /** 요소 추가: 종류 + 값, 정해진 자리에 넣는다 (설계 7.7) */
+  'element:create': Contract<CreateElementInput, ElementView>
   'element:update': Contract<{ elementId: string } & UpdateElementInput, ElementView>
   'element:confirm': Contract<{ elementId: string }, ElementView>
   'element:delete': Contract<{ elementId: string }, null>
@@ -115,7 +116,16 @@ export const ALL_CHANNELS_LISTED: [MissingChannel] extends [never] ? true : Miss
 export type IpcEvents = {
   'blocks:changed': { blockIds: string[] }
   /** 추출 완료. blockIds가 빈 배열이면 할 일 없음 (설계 8.1) */
-  'capture:completed': { captureId: string; blockIds: string[] }
+  /**
+   * 추출 완료 (설계 8.1). toCalendar: 빠진 것이 없어 바로 캘린더에 들어간 블록 수,
+   * needsInput: 채워 주세요로 간 블록 수. 둘의 합은 blockIds 길이와 같다
+   */
+  'capture:completed': {
+    captureId: string
+    blockIds: string[]
+    toCalendar: number
+    needsInput: number
+  }
   'capture:failed': { captureId: string; errorCode: CaptureErrorCode; canRetry: boolean }
   /** 미완료 먹이 수가 바뀜 (설계 9.4) */
   'capture:unfinishedChanged': { count: number }

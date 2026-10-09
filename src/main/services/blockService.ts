@@ -1,7 +1,9 @@
 import type { BlockListFilter, BlockView } from '@shared/views'
+import { classifyBlock } from '../domain/blockClassification'
 import { DomainError } from '../domain/errors'
 import type { Repositories } from '../repositories'
 import type { BlockRow } from '../repositories/blockRepository'
+import { toDomainElement } from '../repositories/elementRepository'
 import { inTransaction, type ServiceDeps } from './deps'
 import { toBlockView } from './views'
 
@@ -12,17 +14,29 @@ import { toBlockView } from './views'
 export class BlockService {
   constructor(private readonly deps: ServiceDeps) {}
 
+  /**
+   * 목록 조회. 채워 주세요·날짜 없는 일은 삭제·완료되지 않은 블록을 후보로 고르고
+   * 블록 분류 규칙으로 거른다(설계 7.6, 7.5 캘린더 조회와 같은 방식). 순서는 후보 순서(최신순) 그대로.
+   */
   list(filter: BlockListFilter): BlockView[] {
-    return inTransaction(this.deps, (repos) =>
-      repos.blocks.list(filter).map((row) => buildView(repos, row))
-    )
+    return inTransaction(this.deps, (repos) => {
+      if (filter !== 'needsInput' && filter !== 'undated') {
+        return repos.blocks.list(filter).map((row) => buildView(repos, row))
+      }
+      return repos.blocks.findOpen().flatMap((row) => {
+        const elements = repos.elements.findLiveByBlock(row.id)
+        const classification = classifyBlock(elements.map(toDomainElement), row.reviewedAt !== null)
+        if (!classification[filter]) return []
+        return [toBlockView(row, elements, repos.labels.findAttachedToBlock(row.id))]
+      })
+    })
   }
 
   get(blockId: string): BlockView {
     return inTransaction(this.deps, (repos) => buildView(repos, loadLiveBlock(repos, blockId)))
   }
 
-  /** 검토 완료 / 검토 취소 */
+  /** 이대로 두기 / 취소 (reviewedAt, 설계 7.4·7.6) */
   setReviewed(blockId: string, reviewed: boolean): BlockView {
     return this.setTimestamp(blockId, 'reviewedAt', reviewed, {
       on: 'block.reviewed',

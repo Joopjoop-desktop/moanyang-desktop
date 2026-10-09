@@ -1,9 +1,11 @@
 import type { CaptureErrorCode } from '@shared/captures'
 import type { CaptureMethod } from '@shared/model'
+import { classifyBlock } from '../domain/blockClassification'
 import { DomainError } from '../domain/errors'
 import { toElementDrafts } from '../extraction/elementDrafts'
 import type { ExtractItem } from '../extraction/types'
 import type { CaptureRow } from '../repositories/captureRepository'
+import { toDomainElement } from '../repositories/elementRepository'
 import { inTransaction, notifySafely, type ServiceDeps } from './deps'
 
 /**
@@ -52,17 +54,19 @@ export class CaptureService {
 
   /**
    * 추출 성공: item마다 블록 하나를 만들고 Capture를 done으로 바꾼다. (설계 8.6)
-   * 블록 전부와 상태 변경이 한 트랜잭션이다. 커밋 후 blocks:changed, 이어서 capture:completed.
+   * 블록 전부와 상태 변경이 한 트랜잭션이다. 커밋 후 blocks:changed, 이어서 capture:completed
+   * (캘린더로 간 수·채워 주세요로 간 수 포함, 설계 8.1).
    * items가 비어 있으면(할 일 없음) 블록 없이 done.
    * @returns 만든 블록 ID (item 순서)
    */
   complete(captureId: string, items: readonly ExtractItem[]): string[] {
-    const blockIds = inTransaction(this.deps, (repos, changes) => {
+    const { blockIds, needsInput } = inTransaction(this.deps, (repos, changes) => {
       if (!repos.captures.transition(captureId, ['extracting'], 'done', null)) {
         throw new DomainError('CAPTURE_NOT_FOUND', `처리 중인 먹이가 없습니다: ${captureId}`)
       }
       const at = this.deps.now()
       const created: string[] = []
+      let toFill = 0
 
       for (const item of items) {
         const drafts = toElementDrafts(item)
@@ -106,12 +110,20 @@ export class CaptureService {
 
         changes.add(blockId)
         created.push(blockId)
+        // 새 블록은 이대로 두기 전이라 빠진 것이 하나라도 있으면 채워 주세요로 간다 (설계 7.6)
+        const elements = repos.elements.findLiveByBlock(blockId).map(toDomainElement)
+        if (classifyBlock(elements, false).needsInput) toFill += 1
       }
-      return created
+      return { blockIds: created, needsInput: toFill }
     })
 
     notifySafely('captureCompleted', () =>
-      this.deps.notifier.captureCompleted({ captureId, blockIds })
+      this.deps.notifier.captureCompleted({
+        captureId,
+        blockIds,
+        toCalendar: blockIds.length - needsInput,
+        needsInput
+      })
     )
     return blockIds
   }

@@ -83,7 +83,7 @@ export function createIpcHandlers(
 
     'element:create': {
       schema: schemas.elementCreateRequest,
-      handle: ({ blockId, value }) => elements.createMemo(blockId, value)
+      handle: (input) => elements.create(input)
     },
     'element:update': {
       schema: schemas.elementUpdateRequest,

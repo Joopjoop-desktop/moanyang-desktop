@@ -1,8 +1,18 @@
-.toast {
+/* 알림 묶음: 화면 아래 가운데, 새 알림이 맨 아래 */
+.stack {
   position: fixed;
   bottom: 24px;
   left: 50%;
   z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -11,7 +21,8 @@
   background: var(--color-text);
   color: var(--color-surface);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: auto;
 }
 
 .action {

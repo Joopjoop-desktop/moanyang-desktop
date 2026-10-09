@@ -1,10 +1,12 @@
 import type { CalendarEntryView } from '@shared/calendar'
 import type { CaptureView } from '@shared/captures'
+import { findMissing } from '../domain/blockClassification'
+import { addableTypes } from '../domain/elementAdd'
 import type { BlockCalendar } from '../domain/calendar'
 import type { AttachedLabelView, BlockView, ElementView, LabelView } from '@shared/views'
 import type { BlockRow } from '../repositories/blockRepository'
 import type { CaptureRow } from '../repositories/captureRepository'
-import type { ElementRow } from '../repositories/elementRepository'
+import { toDomainElement, type ElementRow } from '../repositories/elementRepository'
 import type { AttachedLabelRow, LabelRow } from '../repositories/labelRepository'
 
 /* DB 행을 UI에 돌려줄 형태로 바꾼다. */
@@ -85,6 +87,7 @@ export function toBlockView(
   elements: readonly ElementRow[],
   labels: readonly AttachedLabelRow[]
 ): BlockView {
+  const domainElements = elements.map(toDomainElement)
   return {
     id: row.id,
     reviewedAt: row.reviewedAt,
@@ -94,6 +97,8 @@ export function toBlockView(
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     elements: elements.map(toElementView),
-    labels: labels.map(toAttachedLabelView)
+    labels: labels.map(toAttachedLabelView),
+    missing: findMissing(domainElements),
+    addable: addableTypes(domainElements)
   }
 }

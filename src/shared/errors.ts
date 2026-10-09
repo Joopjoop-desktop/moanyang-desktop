@@ -8,6 +8,8 @@ export const ERROR_CODES = [
   'LABEL_NOT_FOUND',
   /** 요소 종류에 맞지 않거나 형식이 틀린 값 (빈 텍스트, 잘못된 날짜·시간) */
   'ELEMENT_VALUE_INVALID',
+  /** 이미 있는 종류(할 일·시작일·마감일·요청자)를 또 추가하려 함. 있으면 수정한다 (설계 7.7) */
+  'ELEMENT_KIND_EXISTS',
   /** 충돌 미리보기 이후 원본·대상 블록이 바뀜. 미리보기를 다시 해야 함 (설계 7.1) */
   'CONFLICT_PREVIEW_STALE',
   /** 충돌 선택 결과에 현재 충돌 묶음 중 일부가 빠짐 (미리보기 이후 데이터가 바뀜 등) */

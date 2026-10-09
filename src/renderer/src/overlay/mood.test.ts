@@ -8,15 +8,24 @@ describe('캐릭터 표정 (설계 9.7)', () => {
   })
 
   it('반응이 떠 있으면 먹는 중보다 반응이 먼저다', () => {
-    expect(currentMood(1, { mood: 'happy', message: '1개 만들었어요' })).toBe('happy')
+    expect(currentMood(1, { mood: 'happy', message: '캘린더에 1개 넣었어요' })).toBe('happy')
   })
 
   it('블록이 생기면 다 먹음, 없으면 갸우뚱', () => {
-    expect(reactionToCompleted({ captureId: 'c1', blockIds: ['b1', 'b2'] })).toEqual({
+    expect(
+      reactionToCompleted({
+        captureId: 'c1',
+        blockIds: ['b1', 'b2'],
+        toCalendar: 1,
+        needsInput: 1
+      })
+    ).toEqual({
       mood: 'happy',
-      message: '2개 만들었어요'
+      message: '캘린더에 1개 넣었어요\n1개는 채워 주세요'
     })
-    expect(reactionToCompleted({ captureId: 'c1', blockIds: [] })).toEqual({
+    expect(
+      reactionToCompleted({ captureId: 'c1', blockIds: [], toCalendar: 0, needsInput: 0 })
+    ).toEqual({
       mood: 'confused',
       message: '할 일이 안 보여요'
     })

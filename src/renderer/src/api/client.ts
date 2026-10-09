@@ -14,7 +14,7 @@ export class ApiError extends Error {
 
 /**
  * window.api 호출 결과를 풀어 데이터만 돌려준다. 실패면 ApiError를 던진다. (설계 9.5)
- * 예: const blocks = await unwrap(window.api.block.list({ filter: 'inbox' }))
+ * 예: const blocks = await unwrap(window.api.block.list({ filter: 'needsInput' }))
  */
 export async function unwrap<T>(pending: Promise<IpcResult<T>>): Promise<T> {
   const result = await pending

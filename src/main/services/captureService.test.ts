@@ -107,12 +107,33 @@ describe('CaptureService (설계 8장)', () => {
       ])
     })
 
-    it('블록은 검토함에 들어간다', () => {
+    it('블록은 이대로 두기 전, 미완료로 만든다', () => {
       const id = extracting()
 
       const [blockId] = service.complete(id, [item({ task: '견적서 송부' })])
 
-      expect(ctx.repos.blocks.list('inbox').map((b) => b.id)).toEqual([blockId])
+      expect(ctx.repos.blocks.findLiveById(blockId)).toMatchObject({
+        reviewedAt: null,
+        completedAt: null
+      })
+    })
+
+    it('capture:completed에 캘린더로 간 수와 채워 주세요로 간 수를 담는다 (설계 7.6)', () => {
+      const id = extracting()
+      const due = { date: '2026-10-09', time: null, rawText: null, ambiguous: false }
+
+      const blockIds = service.complete(id, [
+        item({ task: '견적서 송부', dueDate: due }),
+        item({ task: '회의실 예약', startDate: due }),
+        item({ task: '날짜 없음' }),
+        item({ requester: '할 일 없음', dueDate: due }),
+        item({ task: '날짜 애매', dueDate: { ...due, ambiguous: true } })
+      ])
+
+      expect(ctx.notifier.events.at(-1)).toEqual({
+        event: 'capture:completed',
+        payload: { captureId: id, blockIds, toCalendar: 2, needsInput: 3 }
+      })
     })
 
     it('block.created와 요소마다 element.created를 남긴다', () => {
@@ -136,7 +157,10 @@ describe('CaptureService (설계 8장)', () => {
 
       expect(ctx.notifier.events).toEqual([
         { event: 'blocks:changed', payload: { blockIds: [...blockIds].sort() } },
-        { event: 'capture:completed', payload: { captureId: id, blockIds } }
+        {
+          event: 'capture:completed',
+          payload: { captureId: id, blockIds, toCalendar: 0, needsInput: 2 }
+        }
       ])
     })
 
@@ -147,7 +171,10 @@ describe('CaptureService (설계 8장)', () => {
       expect(status(id)).toBe('done')
       expect(ctx.repos.blocks.list('all')).toEqual([])
       expect(ctx.notifier.events).toEqual([
-        { event: 'capture:completed', payload: { captureId: id, blockIds: [] } }
+        {
+          event: 'capture:completed',
+          payload: { captureId: id, blockIds: [], toCalendar: 0, needsInput: 0 }
+        }
       ])
     })
 

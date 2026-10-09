@@ -66,7 +66,8 @@ describe('IPC 채널 핸들러', () => {
   })
 
   it('block:list, block:get', async () => {
-    const list = await ok('block:list', { filter: 'inbox' })
+    // a는 날짜 없음, b는 할 일 없음
+    const list = await ok('block:list', { filter: 'needsInput' })
     expect(list.map((b) => b.id).sort()).toEqual(['a', 'b'])
 
     const block = await ok('block:get', { blockId: 'a' })
@@ -126,13 +127,37 @@ describe('IPC 채널 핸들러', () => {
     expect(due).toMatchObject({ dateValue: '2026-10-12', timeValue: '10:00' })
   })
 
+  it('element:create는 종류 + 텍스트 또는 날짜 값을 받는다', async () => {
+    // b에는 마감일만 있다: 할 일은 맨 앞, 요청자는 마감일 뒤
+    const task = await ok('element:create', { blockId: 'b', type: 'task', value: '견적서' })
+    const requester = await ok('element:create', {
+      blockId: 'b',
+      type: 'requester',
+      value: '김과장'
+    })
+    expect(liveIds('b')).toEqual([task.id, 'b-due', requester.id])
+
+    const start = await ok('element:create', {
+      blockId: 'a',
+      type: 'start_date',
+      dateValue: '2026-10-05',
+      timeValue: null
+    })
+    expect(start).toMatchObject({ type: 'start_date', dateValue: '2026-10-05' })
+
+    const unknownType = await call('element:create', { blockId: 'a', type: 'note', value: 'x' })
+    expect(unknownType).toMatchObject({ ok: false, error: { code: 'INVALID_INPUT' } })
+    const exists = await call('element:create', { blockId: 'a', type: 'task', value: 'x' })
+    expect(exists).toMatchObject({ ok: false, error: { code: 'ELEMENT_KIND_EXISTS' } })
+  })
+
   it('block:delete는 null을 돌려주고 블록을 휴지통으로 보낸다', async () => {
     expect(await ok('block:delete', { blockId: 'a' })).toBeNull()
     expect((await ok('block:list', { filter: 'trash' })).map((b) => b.id)).toEqual(['a'])
   })
 
   describe('capture:*', () => {
-    it('capture:submit은 pending으로 응답하고, 추출이 끝나면 검토함에 블록이 생긴다', async () => {
+    it('capture:submit은 pending으로 응답하고, 추출이 끝나면 블록이 생긴다', async () => {
       const capture = await ok('capture:submit', {
         text: '견적서 송부 2026-10-09\n\n회의실 예약',
         method: 'paste'
@@ -141,10 +166,11 @@ describe('IPC 채널 핸들러', () => {
 
       await queue.whenIdle()
 
-      const inbox = await ok('block:list', { filter: 'inbox' })
-      expect(inbox).toHaveLength(4)
+      // 날짜가 있는 견적서 송부는 캘린더에만, 회의실 예약은 채워 주세요에 (a, b와 함께)
+      expect(await ok('block:list', { filter: 'all' })).toHaveLength(4)
+      expect(await ok('block:list', { filter: 'needsInput' })).toHaveLength(3)
       expect(ctx.notifier.events.find((e) => e.event === 'capture:completed')).toMatchObject({
-        payload: { captureId: capture.id }
+        payload: { captureId: capture.id, toCalendar: 1, needsInput: 1 }
       })
     })
 

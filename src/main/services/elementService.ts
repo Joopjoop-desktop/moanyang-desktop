@@ -1,6 +1,7 @@
-import type { UpdateElementInput } from '@shared/elements'
+import type { CreateElementInput, UpdateElementInput } from '@shared/elements'
 import type { ElementView } from '@shared/views'
 import { planDeleteElement } from '../domain/deletion'
+import { planAddElement } from '../domain/elementAdd'
 import { normalizeElementUpdate } from '../domain/elementValues'
 import { DomainError } from '../domain/errors'
 import type { Repositories } from '../repositories'
@@ -16,28 +17,34 @@ export class ElementService {
   constructor(private readonly deps: ServiceDeps) {}
 
   /**
-   * 사용자가 메모를 추가한다. 블록 맨 뒤에 놓는다.
-   * 블록 내용은 사용자가 직접 입력하지 않는다는 원칙에 따라 메모만 직접 만들 수 있다. (설계 1.4)
+   * 사용자가 요소를 추가한다. (설계 1.4, 7.7)
+   * 할 일·시작일·마감일·요청자는 블록에 없을 때만(있으면 ELEMENT_KIND_EXISTS), 상세·메모는 언제든.
+   * 정해진 순서 자리에 넣고 블록 요소의 orderIndex를 다시 매긴다(다른 요소 재번호는 History 없음, 6.2).
+   * 날짜는 사람이 정한 값이라 원래 표현 없이 확인된 상태로 만든다.
    */
-  createMemo(blockId: string, value: string): ElementView {
+  create(input: CreateElementInput): ElementView {
+    const { blockId, type } = input
     return inTransaction(this.deps, (repos, changes) => {
       const block = repos.blocks.findLiveById(blockId)
       if (!block) throw new DomainError('BLOCK_NOT_FOUND', `블록이 없습니다: ${blockId}`)
-      const normalized = normalizeElementUpdate('memo', { value })
-      if (!('value' in normalized)) throw new Error('createMemo: 텍스트 값이 아닙니다')
+      const values = normalizeElementUpdate(type, input)
+
+      const id = this.deps.newId()
+      const elements = repos.elements.findLiveByBlock(blockId)
+      const order = planAddElement({ blockId, elements: elements.map(toDomainElement) }, type, id)
 
       const at = this.deps.now()
-      const id = this.deps.newId()
       repos.elements.insert({
         id,
         blockId,
-        type: 'memo',
-        value: normalized.value,
+        type,
+        ...values,
         captureId: null,
-        orderIndex: repos.elements.findLiveByBlock(blockId).length,
+        orderIndex: order.elementIds.indexOf(id),
         createdAt: at,
         updatedAt: at
       })
+      repos.elements.applyOrder(order.elementIds)
       const created = loadLiveElement(repos, id)
       repos.history.record(
         {

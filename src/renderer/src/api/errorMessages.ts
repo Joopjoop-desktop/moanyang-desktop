@@ -13,6 +13,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   ELEMENT_NOT_FOUND: '요소를 찾을 수 없어요. 이미 삭제됐을 수 있어요.',
   LABEL_NOT_FOUND: '라벨을 찾을 수 없어요.',
   ELEMENT_VALUE_INVALID: '값을 확인해 주세요. 비어 있거나 날짜·시간 형식이 맞지 않아요.',
+  ELEMENT_KIND_EXISTS: '이미 있는 항목이에요. 있는 값을 고쳐 주세요.',
   CONFLICT_PREVIEW_STALE: '내용이 바뀌어서 다시 확인해 주세요.',
   CONFLICT_SELECTION_MISSING: '남길 요소를 다시 골라 주세요.',
   CONFLICT_SELECTION_INVALID: '남길 요소를 다시 골라 주세요.',
