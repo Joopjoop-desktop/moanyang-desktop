@@ -14,6 +14,7 @@ export type ElementDnd = {
   blockSize: number
 }
 export type DragData = ElementDnd | { kind: 'block'; blockId: string }
+/** blockArea: 블록 카드나 목록의 한 줄 항목, board: 목록 아래 빈 곳(분리) */
 export type DropData = ElementDnd | { kind: 'blockArea'; blockId: string } | { kind: 'board' }
 
 export type DropIntent =

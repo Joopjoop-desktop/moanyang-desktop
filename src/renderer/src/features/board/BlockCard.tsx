@@ -15,15 +15,18 @@ import { MemoComposer } from './MemoComposer'
  * - 카드 전체: 요소를 놓으면 맨 뒤로 이동, 블록을 놓으면 합치기
  * - 손잡이(⠿): 블록을 끌어 다른 블록에 합친다 (설계 9.6)
  * draggable이 false면(캘린더 옆 카드 등) 끌기·놓기 없이 보기·편집만 한다.
+ * handle이 false면 손잡이를 숨긴다(목록에서는 한 줄 항목의 손잡이로 블록을 끈다).
  * onAction: 상태 버튼이 성공한 뒤 부른다.
  */
 export function BlockCard({
   block,
   draggable = true,
+  handle = true,
   onAction
 }: {
   block: BlockView
   draggable?: boolean
+  handle?: boolean
   onAction?: (action: BlockAction) => void
 }): React.JSX.Element {
   const currentYear = new Date().getFullYear()
@@ -41,7 +44,11 @@ export function BlockCard({
     listeners,
     attributes,
     isDragging
-  } = useDraggable({ id: `block:${block.id}`, data: dragData, disabled: !dndEnabled })
+  } = useDraggable({
+    id: `block:${block.id}`,
+    data: dragData,
+    disabled: !dndEnabled || !handle
+  })
   const targeted = useIsDropTarget(block.id)
 
   // 카드 하나가 놓는 곳이면서 끄는 대상이다
@@ -58,7 +65,7 @@ export function BlockCard({
   return (
     <article ref={setRefs} className={classNames}>
       <header className={styles.header}>
-        {dndEnabled && (
+        {dndEnabled && handle && (
           <button
             type="button"
             className={styles.handle}

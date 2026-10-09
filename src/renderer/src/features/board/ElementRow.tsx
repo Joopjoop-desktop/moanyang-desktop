@@ -20,7 +20,7 @@ type Props = {
   blockSize: number
   /** 올해가 아니면 날짜에 연도를 붙이기 위해 */
   currentYear: number
-  /** 휴지통 블록은 보기만 한다 */
+  /** 삭제된 블록은 보기만 한다 */
   editable: boolean
   /** false면 끌 수 없다 (캘린더 옆 카드 등) */
   draggable?: boolean
@@ -65,10 +65,10 @@ export function ElementRow({
   const remove = useMutation({
     mutationFn: () => unwrap(window.api.element.delete({ elementId: element.id })),
     onSuccess: () => {
-      // 마지막 요소면 코어가 블록을 휴지통으로 보낸다. 요소 하나만 되살리는 기능은 없다.
+      // 마지막 요소면 코어가 블록을 삭제한다. 요소 하나만 되살리는 기능은 없다.
       if (!isLast) return toast.show({ message: '요소를 삭제했어요.' })
       toast.show({
-        message: '마지막 요소라 블록을 휴지통으로 옮겼어요.',
+        message: '마지막 요소라 블록을 삭제했어요.',
         action: {
           label: '되돌리기',
           run: () => unwrap(window.api.block.restore({ blockId: element.blockId }))
