@@ -39,7 +39,7 @@ export type ExtractOutput = {
 }
 
 /**
- * 추출기. MockExtractor(지금)와 DirectLlmExtractor(9단계)가 구현한다.
+ * 추출기. MockExtractor(지금)와 DirectLlmExtractor(10단계)가 구현한다.
  * 결과를 믿지 않으므로 unknown으로 받고, 코어가 parseExtractOutput으로 검사한다. (설계 8.5)
  * 실패는 ExtractError로 던진다. 그 밖의 예외는 재시도할 수 없는 실패로 본다.
  */
