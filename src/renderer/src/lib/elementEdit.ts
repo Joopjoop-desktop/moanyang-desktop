@@ -49,8 +49,40 @@ export function toUpdate(element: ElementView, draft: ElementDraft): EditResult 
   }
 }
 
-/** 새 메모 값. 비어 있으면 null */
-export function memoValue(text: string): string | null {
-  const value = text.trim()
-  return value === '' ? null : value
+/** 새 요소의 빈 편집 값 ("+ 추가"로 종류를 고른 직후) */
+export function emptyDraft(type: ElementType): ElementDraft {
+  return isDateType(type)
+    ? { kind: 'date', dateValue: '', timeValue: '' }
+    : { kind: 'text', value: '' }
+}
+
+export type CreateResult =
+  | { kind: 'save'; input: UpdateElementInput }
+  /** 아무것도 적지 않음. 만들지 않고 닫는다 */
+  | { kind: 'empty' }
+  | { kind: 'invalid'; message: string }
+
+/**
+ * 새 요소의 편집 값을 element:create 값으로 바꾼다. (설계 7.7, 9.6)
+ * - 글자: 앞뒤 공백을 지운다. 비어 있으면 만들지 않는다
+ * - 날짜: 날짜는 꼭 있어야 하고 시간은 비우면 null. 둘 다 비었으면 만들지 않는다
+ * 형식 상세 검사(없는 날짜 등)와 이미 있는 종류인지는 코어가 한다.
+ */
+export function toCreate(draft: ElementDraft): CreateResult {
+  if (draft.kind === 'text') {
+    const value = draft.value.trim()
+    return value === '' ? { kind: 'empty' } : { kind: 'save', input: { value } }
+  }
+  if (draft.dateValue === '') {
+    return draft.timeValue === ''
+      ? { kind: 'empty' }
+      : { kind: 'invalid', message: '날짜를 골라 주세요.' }
+  }
+  return {
+    kind: 'save',
+    input: {
+      dateValue: draft.dateValue,
+      timeValue: draft.timeValue === '' ? null : draft.timeValue
+    }
+  }
 }

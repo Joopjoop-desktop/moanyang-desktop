@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ElementView } from '@shared/views'
-import { draftFrom, memoValue, toUpdate } from './elementEdit'
+import { draftFrom, emptyDraft, toCreate, toUpdate } from './elementEdit'
 
 function element(overrides: Partial<ElementView>): ElementView {
   return {
@@ -72,8 +72,27 @@ describe('요소 편집 (설계 9.6)', () => {
     expect(toUpdate(due, draftFrom(due)).kind).toBe('invalid')
   })
 
-  it('새 메모는 공백을 지우고, 비어 있으면 만들지 않는다', () => {
-    expect(memoValue('  내일 전화 ')).toBe('내일 전화')
-    expect(memoValue(' \n ')).toBeNull()
+  describe('새 요소 추가 (설계 7.7)', () => {
+    it('종류에 맞는 빈 편집 값으로 시작한다', () => {
+      expect(emptyDraft('memo')).toEqual({ kind: 'text', value: '' })
+      expect(emptyDraft('due_date')).toEqual({ kind: 'date', dateValue: '', timeValue: '' })
+    })
+
+    it('글자는 공백을 지우고, 비어 있으면 만들지 않는다', () => {
+      expect(toCreate({ kind: 'text', value: '  내일 전화 ' })).toEqual({
+        kind: 'save',
+        input: { value: '내일 전화' }
+      })
+      expect(toCreate({ kind: 'text', value: ' \n ' })).toEqual({ kind: 'empty' })
+    })
+
+    it('날짜는 꼭 있어야 하고 시간은 비우면 null, 둘 다 비면 만들지 않는다', () => {
+      expect(toCreate({ kind: 'date', dateValue: '2026-10-20', timeValue: '' })).toEqual({
+        kind: 'save',
+        input: { dateValue: '2026-10-20', timeValue: null }
+      })
+      expect(toCreate({ kind: 'date', dateValue: '', timeValue: '10:00' }).kind).toBe('invalid')
+      expect(toCreate({ kind: 'date', dateValue: '', timeValue: '' })).toEqual({ kind: 'empty' })
+    })
   })
 })

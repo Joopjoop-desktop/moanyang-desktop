@@ -47,6 +47,8 @@ export type BlockView = {
   labels: AttachedLabelView[]
   /** 빠진 필수 (설계 7.6). 없으면 빈 배열 */
   missing: MissingEssential[]
+  /** 지금 사람이 추가할 수 있는 요소 종류, 정해진 순서대로 ("+ 추가" 메뉴, 설계 7.7) */
+  addable: ElementType[]
 }
 
 /**

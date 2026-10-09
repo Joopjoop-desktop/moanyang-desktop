@@ -1,6 +1,7 @@
 import type { CalendarEntryView } from '@shared/calendar'
 import type { CaptureView } from '@shared/captures'
 import { findMissing } from '../domain/blockClassification'
+import { addableTypes } from '../domain/elementAdd'
 import type { BlockCalendar } from '../domain/calendar'
 import type { AttachedLabelView, BlockView, ElementView, LabelView } from '@shared/views'
 import type { BlockRow } from '../repositories/blockRepository'
@@ -86,6 +87,7 @@ export function toBlockView(
   elements: readonly ElementRow[],
   labels: readonly AttachedLabelRow[]
 ): BlockView {
+  const domainElements = elements.map(toDomainElement)
   return {
     id: row.id,
     reviewedAt: row.reviewedAt,
@@ -96,6 +98,7 @@ export function toBlockView(
     updatedAt: row.updatedAt,
     elements: elements.map(toElementView),
     labels: labels.map(toAttachedLabelView),
-    missing: findMissing(elements.map(toDomainElement))
+    missing: findMissing(domainElements),
+    addable: addableTypes(domainElements)
   }
 }

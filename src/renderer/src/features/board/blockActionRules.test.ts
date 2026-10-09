@@ -15,6 +15,7 @@ function block(overrides: Partial<BlockView> = {}): BlockView {
     elements: [],
     labels: [],
     missing: ['task', 'date'],
+    addable: [],
     ...overrides
   }
 }

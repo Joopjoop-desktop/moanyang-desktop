@@ -8,7 +8,7 @@ import styles from './BlockCard.module.css'
 import type { DragData, DropData } from './dnd/dropRules'
 import { ElementRow } from './ElementRow'
 import { LabelPicker } from './LabelPicker'
-import { MemoComposer } from './MemoComposer'
+import { ElementAdder } from './ElementAdder'
 
 /**
  * 블록 카드. 삭제된 블록은 복구 말고는 보기만 한다.
@@ -101,7 +101,7 @@ export function BlockCard({
         </ul>
       </SortableContext>
 
-      {editable && <MemoComposer blockId={block.id} />}
+      {editable && <ElementAdder block={block} />}
 
       <footer className={styles.footer}>
         <BlockActionBar block={block} onDone={onAction} />

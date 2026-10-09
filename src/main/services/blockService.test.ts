@@ -90,11 +90,13 @@ describe('BlockService', () => {
       expect(service.list('needsInput').map((b) => b.id)).toEqual(['new', 'old'])
     })
 
-    it('블록마다 빠진 것을 담는다', () => {
+    it('블록마다 빠진 것과 추가할 수 있는 종류를 담는다', () => {
       seedBlock(ctx.repos, 'b')
       seedElement(ctx.repos, 'r', 'b', 'requester', 0, { value: '김과장' })
 
       expect(service.get('b').missing).toEqual(['task', 'date'])
+      // 요청자는 이미 있어서 빠진다 (설계 7.7)
+      expect(service.get('b').addable).toEqual(['task', 'detail', 'start_date', 'due_date', 'memo'])
       expect(service.list('needsInput')[0].missing).toEqual(['task', 'date'])
     })
   })
