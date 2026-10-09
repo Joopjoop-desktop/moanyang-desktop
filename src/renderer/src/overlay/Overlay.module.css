@@ -36,6 +36,8 @@
   line-height: 1.35;
   text-align: center;
   word-break: keep-all;
+  /* 추출 결과 두 문장은 줄을 나눠 보여준다 */
+  white-space: pre-line;
   transform: translateX(-50%);
   pointer-events: none;
 }

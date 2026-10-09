@@ -24,9 +24,13 @@ describe('먹이 입력과 실패 카드 (설계 8.2, 9.6)', () => {
     expect(pasteProblem(' 견적서 송부 ')).toBeNull()
   })
 
-  it('추출이 끝나면 만든 블록 수를, 할 일이 없으면 그렇다고 알려준다', () => {
-    expect(completedMessage(2)).toBe('블록 2개를 만들었어요.')
-    expect(completedMessage(0)).toBe('할 일이 안 보여요.')
+  it('추출이 끝나면 캘린더로 간 수와 채워야 하는 수를, 할 일이 없으면 그렇다고 알려준다', () => {
+    expect(completedMessage({ toCalendar: 2, needsInput: 1 })).toBe(
+      '캘린더에 2개 넣었어요. 1개는 채워 주세요.'
+    )
+    expect(completedMessage({ toCalendar: 2, needsInput: 0 })).toBe('캘린더에 2개 넣었어요.')
+    expect(completedMessage({ toCalendar: 0, needsInput: 1 })).toBe('1개는 채워 주세요.')
+    expect(completedMessage({ toCalendar: 0, needsInput: 0 })).toBe('할 일이 안 보여요.')
   })
 
   it('다시 시도할 수 있는 실패와 다시 먹여야 하는 실패를 구분한다', () => {

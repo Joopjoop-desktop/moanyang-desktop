@@ -1,4 +1,5 @@
 import { CAPTURE_TEXT_MAX_LENGTH, type CaptureView } from '@shared/captures'
+import type { IpcEvents } from '@shared/ipc'
 import { ERROR_MESSAGES } from '../../api/errorMessages'
 
 /**
@@ -14,9 +15,25 @@ export function pasteProblem(text: string): string | null {
   return null
 }
 
-/** 추출이 끝났을 때 알림 (캐릭터 반응은 7단계) */
-export function completedMessage(blockCount: number): string {
-  return blockCount === 0 ? '할 일이 안 보여요.' : `블록 ${blockCount}개를 만들었어요.`
+type Completed = Pick<IpcEvents['capture:completed'], 'toCalendar' | 'needsInput'>
+
+/**
+ * 추출 결과를 짧은 문장들로. (설계 9.6, 9.7)
+ * 캘린더로 바로 간 것과 채워야 하는 것을 따로 말한다. 블록이 없으면 "할 일이 안 보여요".
+ * 스튜디오 알림과 캐릭터 말풍선이 같이 쓴다.
+ */
+export function completedParts({ toCalendar, needsInput }: Completed): string[] {
+  const parts: string[] = []
+  if (toCalendar > 0) parts.push(`캘린더에 ${toCalendar}개 넣었어요`)
+  if (needsInput > 0) parts.push(`${needsInput}개는 채워 주세요`)
+  return parts.length > 0 ? parts : ['할 일이 안 보여요']
+}
+
+/** 추출이 끝났을 때 스튜디오 알림: 문장마다 마침표 */
+export function completedMessage(event: Completed): string {
+  return completedParts(event)
+    .map((part) => `${part}.`)
+    .join(' ')
 }
 
 /** 실패 카드 문구. 원문이 남아 있지 않으면 다시 먹여 달라고 안내한다 (설계 8.2) */

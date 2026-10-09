@@ -1,4 +1,5 @@
 import type { IpcEvents } from '@shared/ipc'
+import { completedParts } from '../features/capture/captureRules'
 
 /** 캐릭터 표정 (설계 9.7) */
 export const MOODS = ['idle', 'eating', 'happy', 'confused', 'sad'] as const
@@ -14,12 +15,14 @@ export type Reaction = {
 /** 반응을 보여주는 시간 */
 export const REACTION_MS = 3_000
 
-/** 추출 완료 → 다 먹음(블록 있음) / 갸우뚱(할 일 없음) */
+/**
+ * 추출 완료 → 다 먹음(블록 있음) / 갸우뚱(할 일 없음).
+ * 말풍선은 스튜디오 알림과 같은 문장을 줄을 나눠 보여준다 (설계 9.7):
+ * "캘린더에 2개 넣었어요" / "1개는 채워 주세요"
+ */
 export function reactionToCompleted(event: IpcEvents['capture:completed']): Reaction {
-  const count = event.blockIds.length
-  return count > 0
-    ? { mood: 'happy', message: `${count}개 만들었어요` }
-    : { mood: 'confused', message: '할 일이 안 보여요' }
+  const message = completedParts(event).join('\n')
+  return event.blockIds.length > 0 ? { mood: 'happy', message } : { mood: 'confused', message }
 }
 
 /** 추출 실패 → 시무룩. 다시 시도할 수 있으면 스튜디오로 안내한다 */

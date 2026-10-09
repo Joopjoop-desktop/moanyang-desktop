@@ -7,6 +7,11 @@ import { inTransaction, type ServiceDeps } from '../services/deps'
  *
  * 블록 1과 3은 마감일·요청자가 겹쳐 합치기에서 충돌 선택을 해볼 수 있다.
  * 블록 5는 앞뒤 달에 걸친 기간이라 달력(설계 7.5)에서 달을 넘어가는 막대를 볼 수 있다.
+ * 블록 분류(설계 7.6)를 모두 볼 수 있게 섞어 둔다.
+ * - 캘린더에만: 2, 3, 5
+ * - 채워 주세요: 1(날짜 확인), 4(할 일 없음), 6(날짜 없음), 7(원래 표현만 있어 날짜 없음),
+ *   8(할 일 없음, 날짜는 있어 캘린더에도)
+ * - 날짜 없는 일: 9(이대로 두기 한 블록)
  * @returns 만든 블록 ID (만든 순)
  */
 export function seedSampleBlocks(deps: ServiceDeps): string[] {
@@ -19,6 +24,8 @@ export function seedSampleBlocks(deps: ServiceDeps): string[] {
     rawText?: string
     needsConfirm?: boolean
   }
+  /** 9번째 블록만 이대로 두기 한 상태로 만든다 */
+  const KEPT_UNDATED = 8
   const samples: SampleElement[][] = [
     [
       { type: 'task', value: '견적서 송부' },
@@ -46,14 +53,31 @@ export function seedSampleBlocks(deps: ServiceDeps): string[] {
       { type: 'task', value: '분기 보고서 준비' },
       { type: 'start_date', dateValue: addDays(today, -20) },
       { type: 'due_date', dateValue: addDays(today, 25) }
+    ],
+    [
+      { type: 'task', value: '회의실 예약' },
+      { type: 'detail', value: '10명, 프로젝터 필요' }
+    ],
+    [
+      { type: 'task', value: '샘플 발송' },
+      { type: 'due_date', rawText: '다음주쯤', needsConfirm: true }
+    ],
+    [
+      { type: 'requester', value: '박대리 (구매팀)' },
+      { type: 'due_date', dateValue: addDays(today, 2) }
+    ],
+    [
+      { type: 'task', value: '거래처 연락처 정리' },
+      { type: 'memo', value: '언제든 시간 날 때' }
     ]
   ]
 
   return inTransaction(deps, (repos, changes) => {
     const at = deps.now()
-    return samples.map((elements) => {
+    return samples.map((elements, sampleIndex) => {
       const blockId = deps.newId()
       repos.blocks.insert(blockId, at)
+      if (sampleIndex === KEPT_UNDATED) repos.blocks.update(blockId, { reviewedAt: at })
       elements.forEach((element, orderIndex) => {
         repos.elements.insert({
           id: deps.newId(),
