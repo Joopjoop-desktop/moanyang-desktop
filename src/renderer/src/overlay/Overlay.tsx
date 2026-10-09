@@ -6,17 +6,20 @@ import { Character } from './Character'
 import { checkFeed, readTransfer, type FeedInput } from './feed'
 import styles from './Overlay.module.css'
 import { useBubble } from './useBubble'
+import { useCharacterMood } from './useCharacterMood'
 
 const PASTE_HINT = 'Ctrl+V로 먹이 주기'
 
 /**
  * 캐릭터 창 화면. (설계 9.7)
- * - 캐릭터 몸: 글을 끌어다 놓으면 먹는다(drag). 누르면 붙여넣기 모드가 되고 Ctrl+V로 먹는다(paste)
+ * - 캐릭터 몸: 글을 끌어다 놓으면 먹는다(drag). 누르면 붙여넣기 모드가 되고 Ctrl+V로 먹는다(paste).
+ *   두 번 누르면 스튜디오를 연다
  * - 아래 손잡이 막대: 잡고 끌면 창이 움직인다. 놓으면 코어가 위치를 저장한다
- * 표정 바꾸기는 7-4에서 붙인다.
+ * - 표정: 미완료 먹이가 있으면 먹는 중, 추출 결과에는 3초 동안 반응한다
  */
 export function Overlay(): React.JSX.Element {
   const bubble = useBubble()
+  const mood = useCharacterMood(bubble.say)
   const [dragOver, setDragOver] = useState(false)
   const [pasteMode, setPasteMode] = useState(false)
 
@@ -39,6 +42,12 @@ export function Overlay(): React.JSX.Element {
       <div
         className={dragOver ? `${styles.body} ${styles.dragOver}` : styles.body}
         onClick={() => setPasteMode(true)}
+        // 두 번 누르면 클릭도 두 번 와서 붙여넣기 모드가 켜지지만, 스튜디오로 초점이 가면서 바로 꺼진다
+        onDoubleClick={() => {
+          unwrap(window.api.window.openStudio()).catch((error: unknown) =>
+            bubble.say(messageForError(error))
+          )
+        }}
         // 놓기를 허락하려면 dragover의 기본 동작을 막아야 한다
         onDragOver={(event) => {
           event.preventDefault()
@@ -57,7 +66,7 @@ export function Overlay(): React.JSX.Element {
           feed(readTransfer(event.dataTransfer), 'drag')
         }}
       >
-        <Character mood="idle" />
+        <Character mood={mood} />
       </div>
 
       {pasteMode && (

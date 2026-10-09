@@ -19,6 +19,10 @@ export class ElectronChangeNotifier implements ChangeNotifier {
     this.broadcast('capture:failed', payload)
   }
 
+  captureUnfinishedChanged(payload: IpcEvents['capture:unfinishedChanged']): void {
+    this.broadcast('capture:unfinishedChanged', payload)
+  }
+
   private broadcast<E extends IpcEvent>(event: E, payload: IpcEvents[E]): void {
     for (const window of BrowserWindow.getAllWindows()) {
       if (window.isDestroyed() || window.webContents.isDestroyed()) continue

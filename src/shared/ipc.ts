@@ -32,6 +32,8 @@ export type IpcContract = {
   'capture:listFailed': Contract<void, CaptureView[]>
   /** 실패 카드 닫기 */
   'capture:dismiss': Contract<{ captureId: string }, null>
+  /** 전체 미완료 먹이 수: 대기 + 처리 중 + 자동 재시도 대기 (설계 9.4) */
+  'capture:unfinishedCount': Contract<void, { count: number }>
 
   'block:list': Contract<{ filter: BlockListFilter }, BlockView[]>
   'block:get': Contract<{ blockId: string }, BlockView>
@@ -56,6 +58,9 @@ export type IpcContract = {
   'label:attach': Contract<{ blockId: string; labelId: string }, AttachedLabelView[]>
   'label:detach': Contract<{ blockId: string; labelId: string }, AttachedLabelView[]>
 
+  /** 스튜디오 창 열기 (캐릭터 더블클릭, 설계 9.7) */
+  'window:openStudio': Contract<void, null>
+
   /** 개발 모드 전용: 콘솔 확인용 샘플 블록 생성 */
   'dev:seed': Contract<void, BlockView[]>
 }
@@ -70,6 +75,7 @@ export const IPC_CHANNELS = [
   'capture:retry',
   'capture:listFailed',
   'capture:dismiss',
+  'capture:unfinishedCount',
   'block:list',
   'block:get',
   'block:merge',
@@ -86,7 +92,8 @@ export const IPC_CHANNELS = [
   'element:checkConflict',
   'label:list',
   'label:attach',
-  'label:detach'
+  'label:detach',
+  'window:openStudio'
 ] as const satisfies readonly IpcChannel[]
 
 /** 개발 모드에서만 등록·노출하는 채널 */
@@ -105,6 +112,8 @@ export type IpcEvents = {
   /** 추출 완료. blockIds가 빈 배열이면 할 일 없음 (설계 8.1) */
   'capture:completed': { captureId: string; blockIds: string[] }
   'capture:failed': { captureId: string; errorCode: CaptureErrorCode; canRetry: boolean }
+  /** 미완료 먹이 수가 바뀜 (설계 9.4) */
+  'capture:unfinishedChanged': { count: number }
 }
 export type IpcEvent = keyof IpcEvents
 

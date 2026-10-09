@@ -25,6 +25,7 @@ const APP_USER_MODEL_ID = 'com.joopjoop.desktop'
 
 let database: DatabaseConnection | null = null
 let queue: ExtractionQueue | null = null
+let studio: BrowserWindow | null = null
 /** 종료를 이미 확인받았으면 다시 묻지 않는다 */
 let quitConfirmed = false
 
@@ -59,12 +60,13 @@ function confirmQuit(parent?: BrowserWindow): boolean {
  * 트레이가 생기면(7-5) 스튜디오 X는 숨기기로 바뀐다.
  */
 function openWindows(): void {
-  const studio = createStudioWindow()
+  const window = createStudioWindow()
   // 창이 먼저 닫힌 뒤 취소하면 창 없이 앱만 남으므로 닫기 전에 묻는다
-  studio.on('close', (event) => {
-    if (!confirmQuit(studio)) event.preventDefault()
+  window.on('close', (event) => {
+    if (!confirmQuit(window)) event.preventDefault()
   })
-  studio.on('closed', () => app.quit())
+  window.on('closed', () => app.quit())
+  studio = window
 
   // 캐릭터 창은 지난번 위치에 띄운다. 그 위치가 지금 화면 밖이면 기본 위치로 (설계 9.7)
   const settings = new SettingsFile(join(resolveDataDir(), SETTINGS_FILE_NAME))
@@ -75,6 +77,14 @@ function openWindows(): void {
     OVERLAY_SIZE
   )
   createOverlayWindow(position, (moved) => settings.update({ overlay: moved }))
+}
+
+/** 스튜디오를 앞으로 가져온다 (캐릭터 더블클릭, 설계 9.7) */
+function openStudio(): void {
+  if (!studio || studio.isDestroyed()) return
+  if (studio.isMinimized()) studio.restore()
+  studio.show()
+  studio.focus()
 }
 
 app.whenReady().then(() => {
@@ -131,17 +141,19 @@ app.whenReady().then(() => {
   queue = new ExtractionQueue({
     captures: services.captures,
     extractor: new MockExtractor({ delayMs: import.meta.env.DEV ? 1_500 : 0 }),
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    notifier: deps.notifier
   })
+  const windows = { openStudio }
 
   if (import.meta.env.DEV) {
     const handlers = {
-      ...createIpcHandlers(services, queue),
+      ...createIpcHandlers(services, queue, windows),
       ...createDevIpcHandlers(services, deps)
     }
     registerIpcHandlers(ipcMain, handlers, [...IPC_CHANNELS, ...DEV_IPC_CHANNELS])
   } else {
-    registerIpcHandlers(ipcMain, createIpcHandlers(services, queue), IPC_CHANNELS)
+    registerIpcHandlers(ipcMain, createIpcHandlers(services, queue, windows), IPC_CHANNELS)
   }
 
   openWindows()

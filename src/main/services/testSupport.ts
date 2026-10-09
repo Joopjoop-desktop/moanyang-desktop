@@ -37,6 +37,10 @@ export class RecordingNotifier implements ChangeNotifier {
   captureFailed(payload: IpcEvents['capture:failed']): void {
     this.events.push({ event: 'capture:failed', payload })
   }
+
+  captureUnfinishedChanged(payload: IpcEvents['capture:unfinishedChanged']): void {
+    this.events.push({ event: 'capture:unfinishedChanged', payload })
+  }
 }
 
 export type ServiceTestContext = {

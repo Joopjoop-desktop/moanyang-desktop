@@ -42,7 +42,12 @@ describe('ExtractionQueue (설계 8.7)', () => {
     ctx = setupServiceTest()
     captures = new CaptureService(ctx.deps)
     extract = vi.fn<Extractor['extract']>()
-    queue = new ExtractionQueue({ captures, extractor: { extract }, timezone: 'Asia/Seoul' })
+    queue = new ExtractionQueue({
+      captures,
+      extractor: { extract },
+      timezone: 'Asia/Seoul',
+      notifier: ctx.notifier
+    })
   })
 
   afterEach(() => {
@@ -50,6 +55,18 @@ describe('ExtractionQueue (설계 8.7)', () => {
     vi.restoreAllMocks()
     ctx.connection.close()
   })
+
+  /** 추출 결과 이벤트만 (미완료 수 이벤트는 따로 확인한다) */
+  function resultEvents(): typeof ctx.notifier.events {
+    return ctx.notifier.events.filter((e) => e.event !== 'capture:unfinishedChanged')
+  }
+
+  /** 알린 미완료 수를 순서대로 */
+  function announcedCounts(): number[] {
+    return ctx.notifier.events.flatMap((e) =>
+      e.event === 'capture:unfinishedChanged' ? [e.payload.count] : []
+    )
+  }
 
   /** 시간을 ms만큼 흘리고 큐가 빌 때까지 기다린다 */
   async function settle(ms = 0): Promise<void> {
@@ -85,7 +102,7 @@ describe('ExtractionQueue (설계 8.7)', () => {
         capturedAt: view.capturedAt,
         timezone: 'Asia/Seoul'
       })
-      expect(ctx.notifier.events.at(-1)).toMatchObject({
+      expect(resultEvents().at(-1)).toMatchObject({
         event: 'capture:completed',
         payload: { captureId: view.id }
       })
@@ -130,7 +147,7 @@ describe('ExtractionQueue (설계 8.7)', () => {
 
       expect(status(id)).toBe('done')
       expect(blockCount()).toBe(0)
-      expect(ctx.notifier.events).toEqual([
+      expect(resultEvents()).toEqual([
         { event: 'capture:completed', payload: { captureId: id, blockIds: [] } }
       ])
     })
@@ -145,7 +162,7 @@ describe('ExtractionQueue (설계 8.7)', () => {
 
       expect(status(id)).toBe('failed')
       expect(extract).toHaveBeenCalledTimes(1)
-      expect(ctx.notifier.events).toEqual([
+      expect(resultEvents()).toEqual([
         {
           event: 'capture:failed',
           payload: { captureId: id, errorCode: 'CAPTURE_EXTRACT_FAILED', canRetry: true }
@@ -319,6 +336,77 @@ describe('ExtractionQueue (설계 8.7)', () => {
       expect(extract).toHaveBeenCalledTimes(1)
       expect(captures.find(id)).toMatchObject({ status: 'failed', errorCode: 'INTERRUPTED' })
       expect(blockCount()).toBe(0)
+    })
+  })
+
+  describe('미완료 먹이 수 (설계 9.4)', () => {
+    it('먹이를 받으면 1, 끝나면 0을 알린다. 결과 이벤트 뒤에 0이 간다', async () => {
+      extract.mockResolvedValueOnce(output('a'))
+
+      queue.submit('a', 'paste')
+      expect(queue.unfinishedCount()).toBe(1)
+      await settle()
+
+      expect(queue.unfinishedCount()).toBe(0)
+      expect(announcedCounts()).toEqual([1, 0])
+      expect(ctx.notifier.events.map((e) => e.event).slice(-2)).toEqual([
+        'capture:completed',
+        'capture:unfinishedChanged'
+      ])
+    })
+
+    it('여러 개를 먹이면 쌓였다가 하나씩 줄어든다', async () => {
+      extract.mockResolvedValueOnce(output('a')).mockResolvedValueOnce(output('b'))
+
+      queue.submit('a', 'paste')
+      queue.submit('b', 'drag')
+      await settle()
+
+      expect(announcedCounts()).toEqual([1, 2, 1, 0])
+    })
+
+    it('자동 재시도를 기다리는 동안에도 미완료로 센다. 같은 수는 다시 알리지 않는다', async () => {
+      extract.mockRejectedValueOnce(networkError()).mockResolvedValueOnce(output('a'))
+
+      queue.submit('a', 'paste')
+      await settle()
+      expect(queue.unfinishedCount()).toBe(1)
+
+      await settle(2_000)
+      expect(queue.unfinishedCount()).toBe(0)
+      expect(announcedCounts()).toEqual([1, 0])
+    })
+
+    it('수동 다시 시도도 미완료로 센다', async () => {
+      extract.mockRejectedValueOnce(badOutputError()).mockResolvedValueOnce(output('a'))
+      const { id } = queue.submit('a', 'paste')
+      await settle()
+
+      queue.retry(id)
+      expect(queue.unfinishedCount()).toBe(1)
+      await settle()
+
+      expect(announcedCounts()).toEqual([1, 0, 1, 0])
+    })
+
+    it('알림이 실패해도 큐는 계속 처리한다', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      const failing = new ExtractionQueue({
+        captures,
+        extractor: { extract },
+        timezone: 'Asia/Seoul',
+        notifier: {
+          captureUnfinishedChanged: () => {
+            throw new Error('window closed')
+          }
+        }
+      })
+      extract.mockResolvedValueOnce(output('a'))
+
+      const { id } = failing.submit('a', 'paste')
+      await failing.whenIdle()
+
+      expect(status(id)).toBe('done')
     })
   })
 
