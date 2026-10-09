@@ -1,0 +1,7 @@
+/* 캐릭터 창은 배경이 투명해야 캐릭터만 떠 보인다 (창도 transparent: true) */
+html,
+body {
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+}

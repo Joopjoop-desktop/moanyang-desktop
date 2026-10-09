@@ -18,6 +18,15 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [react()]
+    plugins: [react()],
+    // 화면 진입점 2개: 스튜디오(index.html), 캐릭터(overlay.html) (설계 9.7)
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve('src/renderer/index.html'),
+          overlay: resolve('src/renderer/overlay.html')
+        }
+      }
+    }
   }
 })

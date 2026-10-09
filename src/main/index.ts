@@ -1,7 +1,6 @@
-import { app, shell, dialog, ipcMain, BrowserWindow } from 'electron'
+import { app, dialog, ipcMain, BrowserWindow } from 'electron'
 import { DEV_IPC_CHANNELS, IPC_CHANNELS } from '@shared/ipc'
-import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { electronApp, optimizer } from '@electron-toolkit/utils'
 import type { DatabaseConnection } from './db/connection'
 import { initDatabase } from './db'
 import { newId } from './infra/id'
@@ -14,6 +13,7 @@ import type { ServiceDeps } from './services/deps'
 import { ExtractionQueue } from './services/extractionQueue'
 import { MockExtractor } from './extraction/mockExtractor'
 import { createDevIpcHandlers } from './dev/handlers'
+import { createOverlayWindow, createStudioWindow } from './os/windows'
 
 const APP_USER_MODEL_ID = 'com.joopjoop.desktop'
 
@@ -48,43 +48,19 @@ function confirmQuit(parent?: BrowserWindow): boolean {
   return quitConfirmed
 }
 
-function createStudioWindow(): void {
-  const window = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    show: false,
-    autoHideMenuBar: true,
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true
-    }
+/**
+ * 창 띄우기. 지금은 스튜디오를 닫으면 앱을 끝낸다(캐릭터 창만 남지 않게).
+ * 트레이가 생기면(7-5) 스튜디오 X는 숨기기로 바뀐다.
+ */
+function openWindows(): void {
+  const studio = createStudioWindow()
+  // 창이 먼저 닫힌 뒤 취소하면 창 없이 앱만 남으므로 닫기 전에 묻는다
+  studio.on('close', (event) => {
+    if (!confirmQuit(studio)) event.preventDefault()
   })
+  studio.on('closed', () => app.quit())
 
-  window.on('ready-to-show', () => {
-    window.show()
-  })
-
-  // 지금은 스튜디오 창을 닫으면 앱이 종료되므로 창을 닫기 전에 묻는다.
-  // (창이 먼저 닫힌 뒤 취소하면 창 없이 앱만 남기 때문) 7단계 트레이가 생기면 다시 정한다.
-  window.on('close', (event) => {
-    if (!confirmQuit(window)) event.preventDefault()
-  })
-
-  // 새 창은 열지 않고, http(s) 링크만 기본 브라우저로 연다.
-  window.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://') || url.startsWith('http://')) {
-      shell.openExternal(url)
-    }
-    return { action: 'deny' }
-  })
-
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    window.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    window.loadFile(join(__dirname, '../renderer/index.html'))
-  }
+  createOverlayWindow()
 }
 
 app.whenReady().then(() => {
@@ -154,7 +130,7 @@ app.whenReady().then(() => {
     registerIpcHandlers(ipcMain, createIpcHandlers(services, queue), IPC_CHANNELS)
   }
 
-  createStudioWindow()
+  openWindows()
 })
 
 app.on('window-all-closed', () => {
