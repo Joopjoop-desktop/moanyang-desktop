@@ -85,8 +85,12 @@ function loadPage(window: BrowserWindow, page: RendererPage): void {
   }
 }
 
-/** 새 창은 열지 않고, http(s) 링크만 기본 브라우저로 연다. */
+/**
+ * 새 창은 열지 않고, http(s) 링크만 기본 브라우저로 연다.
+ * 창 안에서 다른 주소로 넘어가는 것도 막는다(예: 파일·링크를 창에 떨어뜨렸을 때).
+ */
 function denyNewWindows(window: BrowserWindow): void {
+  window.webContents.on('will-navigate', (event) => event.preventDefault())
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://') || url.startsWith('http://')) {
       shell.openExternal(url)
