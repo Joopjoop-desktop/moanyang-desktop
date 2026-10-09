@@ -1,3 +1,10 @@
+/* 달력 + 오른쪽 패널 */
+.layout {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
 .calendar {
   display: flex;
   flex: 1;
@@ -98,9 +105,13 @@
   font-size: 12px;
 }
 
-/* 기간 막대 */
+/* 기간 막대 (누르면 블록 카드) */
 .bar {
   z-index: 1;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
   margin: 0 4px;
   padding: 1px 6px;
   overflow: hidden;
@@ -137,6 +148,12 @@
 }
 
 .mark {
+  width: 100%;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -192,4 +209,25 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.mark:hover,
+.bar:hover {
+  filter: brightness(0.95);
+}
+
+/* 칸이 넘칠 때 "+N개" (누르면 그날의 블록 목록) */
+.more {
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.more:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
 }

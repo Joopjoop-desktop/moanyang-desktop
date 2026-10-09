@@ -22,6 +22,8 @@ type Props = {
   currentYear: number
   /** 휴지통 블록은 보기만 한다 */
   editable: boolean
+  /** false면 끌 수 없다 (캘린더 옆 카드 등) */
+  draggable?: boolean
 }
 
 /**
@@ -34,7 +36,8 @@ export function ElementRow({
   index,
   blockSize,
   currentYear,
-  editable
+  editable,
+  draggable = true
 }: Props): React.JSX.Element {
   const toast = useToast()
   const [editing, setEditing] = useState(false)
@@ -50,7 +53,7 @@ export function ElementRow({
   const { setNodeRef, listeners, transform, transition, isDragging, isOver } = useSortable({
     id: element.id,
     data: dndData,
-    disabled: !editable || editing
+    disabled: !editable || !draggable || editing
   })
   const insertBefore = useInsertMarker(isOver, element.blockId)
   const onError = (error: unknown): void => toast.show({ message: messageForError(error) })
@@ -77,7 +80,7 @@ export function ElementRow({
 
   const classNames = [
     styles.row,
-    editable && !editing ? styles.draggable : '',
+    editable && draggable && !editing ? styles.draggable : '',
     isDragging ? styles.dragging : '',
     insertBefore ? styles.insertBefore : ''
   ].join(' ')

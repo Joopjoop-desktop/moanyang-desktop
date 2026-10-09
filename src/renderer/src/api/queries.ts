@@ -14,6 +14,14 @@ export function useBlockList(filter: BlockListFilter): UseQueryResult<BlockView[
   })
 }
 
+/** 블록 하나 (휴지통 블록은 BLOCK_NOT_FOUND) */
+export function useBlock(blockId: string): UseQueryResult<BlockView> {
+  return useQuery({
+    queryKey: queryKeys.block(blockId),
+    queryFn: () => unwrap(window.api.block.get({ blockId }))
+  })
+}
+
 /** 기간(양 끝 포함)과 겹치는 블록의 달력 표시 */
 export function useCalendar(from: string, to: string): UseQueryResult<CalendarEntryView[]> {
   return useQuery({
