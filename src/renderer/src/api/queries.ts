@@ -1,4 +1,5 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
+import type { CalendarEntryView } from '@shared/calendar'
 import type { CaptureView } from '@shared/captures'
 import type { BlockListFilter, BlockView, LabelView } from '@shared/views'
 import { unwrap } from './client'
@@ -10,6 +11,14 @@ export function useBlockList(filter: BlockListFilter): UseQueryResult<BlockView[
   return useQuery({
     queryKey: queryKeys.blockList(filter),
     queryFn: () => unwrap(window.api.block.list({ filter }))
+  })
+}
+
+/** 기간(양 끝 포함)과 겹치는 블록의 달력 표시 */
+export function useCalendar(from: string, to: string): UseQueryResult<CalendarEntryView[]> {
+  return useQuery({
+    queryKey: queryKeys.calendar(from, to),
+    queryFn: () => unwrap(window.api.calendar.list({ from, to }))
   })
 }
 

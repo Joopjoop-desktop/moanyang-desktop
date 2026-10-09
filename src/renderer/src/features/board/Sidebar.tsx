@@ -1,14 +1,14 @@
 import type { BlockListFilter } from '@shared/views'
 import { useBlockList } from '../../api/queries'
 import styles from './Sidebar.module.css'
-import { TABS } from './tabs'
+import { TABS, type StudioView } from './tabs'
 
 type Props = {
-  current: BlockListFilter
-  onSelect: (filter: BlockListFilter) => void
+  current: StudioView
+  onSelect: (view: StudioView) => void
 }
 
-/** 왼쪽 탭. 탭마다 블록 수를 보여준다. */
+/** 왼쪽 탭. 블록 목록 탭은 블록 수를 보여준다. 맨 아래는 캘린더. */
 export function Sidebar({ current, onSelect }: Props): React.JSX.Element {
   return (
     <nav className={styles.sidebar}>
@@ -22,6 +22,13 @@ export function Sidebar({ current, onSelect }: Props): React.JSX.Element {
           onSelect={onSelect}
         />
       ))}
+      <button
+        type="button"
+        className={current === 'calendar' ? `${styles.tab} ${styles.active}` : styles.tab}
+        onClick={() => onSelect('calendar')}
+      >
+        <span>캘린더</span>
+      </button>
     </nav>
   )
 }

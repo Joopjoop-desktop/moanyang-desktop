@@ -7,6 +7,8 @@ import type { BlockListFilter } from '@shared/views'
 export const queryKeys = {
   blocks: ['blocks'] as const,
   blockList: (filter: BlockListFilter) => ['blocks', 'list', filter] as const,
+  /** ['blocks']로 시작하므로 blocks:changed가 오면 달력도 다시 불러온다 (설계 7.5) */
+  calendar: (from: string, to: string) => ['blocks', 'calendar', from, to] as const,
   failedCaptures: ['captures', 'failed'] as const,
   labels: ['labels'] as const
 }
