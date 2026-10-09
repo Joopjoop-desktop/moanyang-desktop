@@ -45,6 +45,8 @@ export type BlockView = {
   /** orderIndex 순 */
   elements: ElementView[]
   labels: AttachedLabelView[]
+  /** 빠진 필수 (설계 7.6). 없으면 빈 배열 */
+  missing: MissingEssential[]
 }
 
 /**
@@ -56,6 +58,10 @@ export type BlockView = {
 export const MISSING_ESSENTIALS = ['task', 'date', 'dateConfirm'] as const
 export type MissingEssential = (typeof MISSING_ESSENTIALS)[number]
 
-/** 블록 목록 종류 (block:list) */
-export const BLOCK_LIST_FILTERS = ['inbox', 'all', 'completed', 'trash'] as const
+/**
+ * 블록 목록 종류 (block:list, 설계 9.3)
+ * - needsInput: 채워 주세요, undated: 날짜 없는 일 (설계 7.6). 화면은 이 둘만 쓴다
+ * - all, completed, trash: 코어에 남겨 두고 화면에서는 쓰지 않는다
+ */
+export const BLOCK_LIST_FILTERS = ['needsInput', 'undated', 'all', 'completed', 'trash'] as const
 export type BlockListFilter = (typeof BLOCK_LIST_FILTERS)[number]

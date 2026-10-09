@@ -148,7 +148,10 @@ describe('ExtractionQueue (설계 8.7)', () => {
       expect(status(id)).toBe('done')
       expect(blockCount()).toBe(0)
       expect(resultEvents()).toEqual([
-        { event: 'capture:completed', payload: { captureId: id, blockIds: [] } }
+        {
+          event: 'capture:completed',
+          payload: { captureId: id, blockIds: [], toCalendar: 0, needsInput: 0 }
+        }
       ])
     })
   })

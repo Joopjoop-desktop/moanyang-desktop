@@ -10,7 +10,7 @@ import { useCompletedToast } from './features/capture/useCompletedToast'
 function App(): React.JSX.Element {
   useCoreEvents()
   useCompletedToast()
-  const [view, setView] = useState<StudioView>('inbox')
+  const [view, setView] = useState<StudioView>('needsInput')
 
   return (
     <div className="app">

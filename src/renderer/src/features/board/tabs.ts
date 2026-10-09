@@ -5,7 +5,8 @@ export type StudioView = BlockListFilter | 'calendar'
 
 /** 왼쪽 탭 중 블록 목록 (설계 9.6) */
 export const TABS: readonly { filter: BlockListFilter; label: string; empty: string }[] = [
-  { filter: 'inbox', label: '검토함', empty: '검토할 블록이 없어요. 먹이를 주면 여기에 나타나요.' },
+  { filter: 'needsInput', label: '채워 주세요', empty: '채울 블록이 없어요.' },
+  { filter: 'undated', label: '날짜 없는 일', empty: '날짜 없이 둔 일이 없어요.' },
   { filter: 'all', label: '전체', empty: '아직 블록이 없어요.' },
   { filter: 'completed', label: '완료', empty: '완료한 블록이 없어요.' },
   {

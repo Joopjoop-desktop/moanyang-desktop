@@ -103,7 +103,7 @@ function BoardSurface({ filter, blocks, error, dragging }: SurfaceProps): React.
         {tab?.label}
         {splitting && <span className={styles.hint}>여기에 놓으면 새 블록으로 나눠요</span>}
       </h2>
-      {filter === 'inbox' && <CapturePanel />}
+      {filter === 'needsInput' && <CapturePanel />}
       {error ? (
         <p className={styles.message}>{messageForError(error)}</p>
       ) : !blocks ? (

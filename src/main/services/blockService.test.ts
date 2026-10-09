@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import type { BlockListFilter } from '@shared/views'
 import { BlockService } from './blockService'
 import {
   SEED_AT,
@@ -23,28 +24,79 @@ describe('BlockService', () => {
     ctx.connection.close()
   })
 
-  it('목록 종류별로 블록을 나눠 돌려준다', () => {
-    const { repos } = ctx
-    for (const id of ['inbox', 'reviewed', 'done', 'trashed', 'emptied']) {
-      seedBlock(repos, id)
-      seedElement(repos, `${id}-task`, id, 'task', 0, { value: id })
-    }
-    repos.blocks.update('reviewed', { reviewedAt: SEED_AT })
-    repos.blocks.update('done', { reviewedAt: SEED_AT, completedAt: SEED_AT })
-    repos.blocks.softDelete('trashed', 'user', SEED_AT)
-    repos.blocks.softDelete('emptied', 'emptied', SEED_AT)
-
-    const ids = (filter: 'inbox' | 'all' | 'completed' | 'trash'): string[] =>
+  describe('목록 (설계 7.6, 9.3)', () => {
+    const ids = (filter: BlockListFilter): string[] =>
       service
         .list(filter)
         .map((b) => b.id)
         .sort()
 
-    expect(ids('inbox')).toEqual(['inbox'])
-    expect(ids('all')).toEqual(['done', 'inbox', 'reviewed'])
-    expect(ids('completed')).toEqual(['done'])
-    // emptied는 휴지통에 보이지 않는다
-    expect(ids('trash')).toEqual(['trashed'])
+    /** 할 일만 있는 블록 (날짜 없음) */
+    function seedTaskOnly(id: string): void {
+      seedBlock(ctx.repos, id)
+      seedElement(ctx.repos, `${id}-task`, id, 'task', 0, { value: id })
+    }
+
+    it('전체·완료·휴지통은 블록 상태로 나눈다', () => {
+      const { repos } = ctx
+      for (const id of ['open', 'reviewed', 'done', 'trashed', 'emptied']) seedTaskOnly(id)
+      repos.blocks.update('reviewed', { reviewedAt: SEED_AT })
+      repos.blocks.update('done', { reviewedAt: SEED_AT, completedAt: SEED_AT })
+      repos.blocks.softDelete('trashed', 'user', SEED_AT)
+      repos.blocks.softDelete('emptied', 'emptied', SEED_AT)
+
+      expect(ids('all')).toEqual(['done', 'open', 'reviewed'])
+      expect(ids('completed')).toEqual(['done'])
+      // emptied는 휴지통에 보이지 않는다
+      expect(ids('trash')).toEqual(['trashed'])
+    })
+
+    it('채워 주세요·날짜 없는 일은 요소와 이대로 두기로 나눈다', () => {
+      const { repos } = ctx
+      // 할 일 + 날짜: 캘린더에만
+      seedTaskOnly('complete')
+      seedElement(repos, 'complete-due', 'complete', 'due_date', 1, { dateValue: '2026-10-09' })
+      // 할 일만, 이대로 두기 전 → 채워 주세요 / 후 → 날짜 없는 일
+      seedTaskOnly('undatedOpen')
+      seedTaskOnly('undatedKept')
+      repos.blocks.update('undatedKept', { reviewedAt: SEED_AT })
+      // 할 일 없음: 이대로 두기 했어도 채워 주세요
+      seedBlock(repos, 'noTask')
+      seedElement(repos, 'noTask-req', 'noTask', 'requester', 0, { value: '김과장' })
+      repos.blocks.update('noTask', { reviewedAt: SEED_AT })
+      // 날짜 확인 필요: 이대로 두기 했어도 채워 주세요
+      seedTaskOnly('unsure')
+      seedElement(repos, 'unsure-due', 'unsure', 'due_date', 1, {
+        dateValue: '2026-10-12',
+        needsConfirm: true
+      })
+      repos.blocks.update('unsure', { reviewedAt: SEED_AT })
+      // 완료·삭제는 어느 목록에도 없다
+      seedTaskOnly('done')
+      repos.blocks.update('done', { completedAt: SEED_AT })
+      seedTaskOnly('trashed')
+      repos.blocks.softDelete('trashed', 'user', SEED_AT)
+
+      expect(ids('needsInput')).toEqual(['noTask', 'undatedOpen', 'unsure'])
+      expect(ids('undated')).toEqual(['undatedKept'])
+    })
+
+    it('채워 주세요는 최근 블록이 위', () => {
+      const { repos } = ctx
+      seedTaskOnly('old')
+      repos.blocks.insert('new', '2026-10-02T00:00:00.000Z')
+      seedElement(repos, 'new-task', 'new', 'task', 0, { value: 'new' })
+
+      expect(service.list('needsInput').map((b) => b.id)).toEqual(['new', 'old'])
+    })
+
+    it('블록마다 빠진 것을 담는다', () => {
+      seedBlock(ctx.repos, 'b')
+      seedElement(ctx.repos, 'r', 'b', 'requester', 0, { value: '김과장' })
+
+      expect(service.get('b').missing).toEqual(['task', 'date'])
+      expect(service.list('needsInput')[0].missing).toEqual(['task', 'date'])
+    })
   })
 
   it('검토 완료는 History를 남기고, 이미 그 상태면 아무것도 바꾸지 않는다', () => {

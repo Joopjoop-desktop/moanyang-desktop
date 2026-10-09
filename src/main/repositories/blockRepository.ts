@@ -6,6 +6,8 @@ import type { DbExecutor } from './executor'
 
 export type BlockRow = typeof blocks.$inferSelect
 export type BlockPatch = Partial<Omit<BlockRow, 'id' | 'createdAt'>>
+/** 블록 행만 보고 고를 수 있는 목록 */
+export type StoredBlockListFilter = Exclude<BlockListFilter, 'needsInput' | 'undated'>
 
 /**
  * 블록 저장소. 기본 조회는 삭제되지 않은 블록만 돌려준다. (설계 6.5)
@@ -26,23 +28,15 @@ export class BlockRepository {
   }
 
   /**
-   * 목록 조회.
-   * - inbox: 검토 전이고 미완료 (최신순)
+   * 목록 조회. 채워 주세요·날짜 없는 일은 요소를 봐야 해서 서비스가 findOpen으로 거른다(설계 7.6).
    * - all: 삭제되지 않은 블록 전체 (최신순)
    * - completed: 완료 (완료 최신순)
    * - trash: 사용자가 삭제한 블록만 (삭제 최신순). emptied는 보이지 않는다 (설계 7.3)
    * 같은 시각에 만든 블록(같은 먹이에서 나온 블록)은 만든 순서대로 나란히 놓인다.
    */
-  list(filter: BlockListFilter): BlockRow[] {
+  list(filter: StoredBlockListFilter): BlockRow[] {
     const query = this.db.select().from(blocks)
     switch (filter) {
-      case 'inbox':
-        return query
-          .where(
-            and(isNull(blocks.deletedAt), isNull(blocks.reviewedAt), isNull(blocks.completedAt))
-          )
-          .orderBy(desc(blocks.createdAt), asc(blocks.id))
-          .all()
       case 'all':
         return query
           .where(isNull(blocks.deletedAt))
@@ -59,6 +53,16 @@ export class BlockRepository {
           .orderBy(desc(blocks.deletedAt), asc(blocks.id))
           .all()
     }
+  }
+
+  /** 채워 주세요·날짜 없는 일 후보: 삭제·완료되지 않은 블록 (최신순, 설계 7.6) */
+  findOpen(): BlockRow[] {
+    return this.db
+      .select()
+      .from(blocks)
+      .where(and(isNull(blocks.deletedAt), isNull(blocks.completedAt)))
+      .orderBy(desc(blocks.createdAt), asc(blocks.id))
+      .all()
   }
 
   /** 기본 상태(검토 전, 미완료, 라벨 없음)로 만든다. (설계 7.4) */
