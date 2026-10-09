@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { CAPTURE_TEXT_MAX_LENGTH } from '@shared/captures'
 import { CAPTURE_METHODS, ELEMENT_TYPES } from '@shared/model'
 import { BLOCK_LIST_FILTERS } from '@shared/views'
+import { isValidDate } from '../domain/calendarValues'
 
 /**
  * IPC 요청 검증 스키마. (설계 9.1)
@@ -69,3 +70,11 @@ export const conflictCheckRequest = z.discriminatedUnion('kind', [
 ])
 
 export const labelLinkRequest = z.object({ blockId: id, labelId: id })
+
+/** 달력에 있는 날짜(YYYY-MM-DD)만. 2026-02-30 같은 없는 날짜는 거절 */
+const calendarDate = z.string().refine(isValidDate, '달력에 있는 YYYY-MM-DD 날짜여야 합니다')
+
+/** 달력 조회 기간. from이 to보다 늦으면 거절 (설계 7.5) */
+export const calendarListRequest = z
+  .object({ from: calendarDate, to: calendarDate })
+  .refine(({ from, to }) => from <= to, { message: 'from이 to보다 늦습니다', path: ['from'] })

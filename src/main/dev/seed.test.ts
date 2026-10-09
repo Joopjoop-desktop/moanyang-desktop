@@ -14,10 +14,11 @@ describe('dev:seed 샘플 블록', () => {
     ctx.connection.close()
   })
 
-  it('검토함에 샘플 블록 4개를 만들고 한 번에 알린다', () => {
+  it('검토함에 샘플 블록 5개를 만들고 한 번에 알린다', () => {
     const ids = seedSampleBlocks(ctx.deps)
 
     const inbox = createServices(ctx.deps).blocks.list('inbox')
+    expect(ids).toHaveLength(5)
     expect(inbox.map((b) => b.id).sort()).toEqual([...ids].sort())
     expect(ctx.notifier.calls).toEqual([[...ids].sort()])
   })

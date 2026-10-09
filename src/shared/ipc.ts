@@ -1,3 +1,4 @@
+import type { CalendarEntryView } from './calendar'
 import type { CaptureErrorCode, CaptureView } from './captures'
 import type { UpdateElementInput } from './elements'
 import type { ErrorCode } from './errors'
@@ -58,6 +59,9 @@ export type IpcContract = {
   'label:attach': Contract<{ blockId: string; labelId: string }, AttachedLabelView[]>
   'label:detach': Contract<{ blockId: string; labelId: string }, AttachedLabelView[]>
 
+  /** 기간(from~to, YYYY-MM-DD, 양 끝 포함)과 겹치는 블록의 달력 표시 (설계 7.5) */
+  'calendar:list': Contract<{ from: string; to: string }, CalendarEntryView[]>
+
   /** 스튜디오 창 열기 (캐릭터 더블클릭, 설계 9.7) */
   'window:openStudio': Contract<void, null>
 
@@ -93,6 +97,7 @@ export const IPC_CHANNELS = [
   'label:list',
   'label:attach',
   'label:detach',
+  'calendar:list',
   'window:openStudio'
 ] as const satisfies readonly IpcChannel[]
 

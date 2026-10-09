@@ -13,23 +13,31 @@ import { MemoComposer } from './MemoComposer'
  * 블록 카드. 휴지통 블록은 복구 말고는 보기만 한다.
  * - 카드 전체: 요소를 놓으면 맨 뒤로 이동, 블록을 놓으면 합치기
  * - 손잡이(⠿): 블록을 끌어 다른 블록에 합친다 (설계 9.6)
+ * draggable이 false면(캘린더 옆 카드 등) 끌기·놓기 없이 보기·편집만 한다.
  */
-export function BlockCard({ block }: { block: BlockView }): React.JSX.Element {
+export function BlockCard({
+  block,
+  draggable = true
+}: {
+  block: BlockView
+  draggable?: boolean
+}): React.JSX.Element {
   const currentYear = new Date().getFullYear()
   const editable = block.deletedAt === null
+  const dndEnabled = editable && draggable
   const dropData: DropData = { kind: 'blockArea', blockId: block.id }
   const dragData: DragData = { kind: 'block', blockId: block.id }
   const { setNodeRef: setDropRef } = useDroppable({
     id: `block-area:${block.id}`,
     data: dropData,
-    disabled: !editable
+    disabled: !dndEnabled
   })
   const {
     setNodeRef: setDragRef,
     listeners,
     attributes,
     isDragging
-  } = useDraggable({ id: `block:${block.id}`, data: dragData, disabled: !editable })
+  } = useDraggable({ id: `block:${block.id}`, data: dragData, disabled: !dndEnabled })
   const targeted = useIsDropTarget(block.id)
 
   // 카드 하나가 놓는 곳이면서 끄는 대상이다
@@ -46,7 +54,7 @@ export function BlockCard({ block }: { block: BlockView }): React.JSX.Element {
   return (
     <article ref={setRefs} className={classNames}>
       <header className={styles.header}>
-        {editable && (
+        {dndEnabled && (
           <button
             type="button"
             className={styles.handle}
@@ -76,6 +84,7 @@ export function BlockCard({ block }: { block: BlockView }): React.JSX.Element {
               blockSize={block.elements.length}
               currentYear={currentYear}
               editable={editable}
+              draggable={dndEnabled}
             />
           ))}
         </ul>

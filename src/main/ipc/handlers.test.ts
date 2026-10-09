@@ -207,6 +207,14 @@ describe('IPC 채널 핸들러', () => {
     expect(await count()).toEqual({ ok: true, data: { count: 0 } })
   })
 
+  it('calendar:list는 기간과 겹치는 블록의 달력 표시를 돌려준다', async () => {
+    // beforeEach의 b 블록: 마감일 2026-10-09
+    expect(await ok('calendar:list', { from: '2026-10-01', to: '2026-10-31' })).toMatchObject([
+      { blockId: 'b', marks: [{ kind: 'due', date: '2026-10-09' }] }
+    ])
+    expect(await ok('calendar:list', { from: '2026-11-01', to: '2026-11-30' })).toEqual([])
+  })
+
   it('window:openStudio는 스튜디오를 연다', async () => {
     expect(await ok('window:openStudio', undefined)).toBeNull()
     expect(openedStudio).toBe(1)
@@ -216,6 +224,9 @@ describe('IPC 채널 핸들러', () => {
     it.each([
       ['capture:submit', { text: '  \n ', method: 'paste' }],
       ['capture:submit', { text: '견적서', method: 'ocr' }],
+      ['calendar:list', { from: '2026/10/01', to: '2026-10-31' }],
+      ['calendar:list', { from: '2026-02-30', to: '2026-03-31' }],
+      ['calendar:list', { from: '2026-10-31', to: '2026-10-01' }],
       ['block:list', { filter: 'everything' }],
       ['block:get', { blockId: '' }],
       ['block:get', undefined],
