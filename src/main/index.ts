@@ -1,4 +1,5 @@
-import { app, dialog, ipcMain, BrowserWindow } from 'electron'
+import { app, dialog, ipcMain, screen, BrowserWindow } from 'electron'
+import { join } from 'path'
 import { DEV_IPC_CHANNELS, IPC_CHANNELS } from '@shared/ipc'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import type { DatabaseConnection } from './db/connection'
@@ -13,7 +14,12 @@ import type { ServiceDeps } from './services/deps'
 import { ExtractionQueue } from './services/extractionQueue'
 import { MockExtractor } from './extraction/mockExtractor'
 import { createDevIpcHandlers } from './dev/handlers'
-import { createOverlayWindow, createStudioWindow } from './os/windows'
+import { resolveDataDir } from './db/paths'
+import { resolveOverlayPosition } from './os/overlayPosition'
+import { SettingsFile } from './os/settingsFile'
+import { createOverlayWindow, createStudioWindow, OVERLAY_SIZE } from './os/windows'
+
+const SETTINGS_FILE_NAME = 'settings.json'
 
 const APP_USER_MODEL_ID = 'com.joopjoop.desktop'
 
@@ -60,7 +66,15 @@ function openWindows(): void {
   })
   studio.on('closed', () => app.quit())
 
-  createOverlayWindow()
+  // 캐릭터 창은 지난번 위치에 띄운다. 그 위치가 지금 화면 밖이면 기본 위치로 (설계 9.7)
+  const settings = new SettingsFile(join(resolveDataDir(), SETTINGS_FILE_NAME))
+  const position = resolveOverlayPosition(
+    settings.read().overlay,
+    screen.getAllDisplays().map((display) => display.workArea),
+    screen.getPrimaryDisplay().workArea,
+    OVERLAY_SIZE
+  )
+  createOverlayWindow(position, (moved) => settings.update({ overlay: moved }))
 }
 
 app.whenReady().then(() => {

@@ -1,20 +1,27 @@
 .stage {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   height: 100%;
 }
 
-/* 임시: 투명 창 위에 동그라미만 보이면 된다 */
-.placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  color: var(--color-surface);
-  font-weight: 700;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+/*
+ * 창 옮기기 손잡이. -webkit-app-region: drag 영역은 잡고 끌면 창이 움직인다.
+ * 이 영역에서는 클릭·드롭을 받을 수 없어서, 캐릭터 몸과 나눠 둔다.
+ */
+.handle {
+  width: 48px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0.4;
+  -webkit-app-region: drag;
+  cursor: grab;
+  transition: opacity 0.15s;
+}
+
+.stage:hover .handle {
+  opacity: 1;
 }
