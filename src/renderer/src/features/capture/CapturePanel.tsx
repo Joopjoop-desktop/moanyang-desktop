@@ -10,7 +10,7 @@ import { useToast } from '../toast/toastContext'
 import { failedCardMessage, pasteProblem } from './captureRules'
 import styles from './CapturePanel.module.css'
 
-/** 검토함 위: 붙여넣기 입력창 + 실패 카드 (설계 9.6) */
+/** 스튜디오 맨 위 먹이 칸: 붙여넣기 입력창 + 실패 카드 (설계 9.6) */
 export function CapturePanel(): React.JSX.Element {
   return (
     <div className={styles.panel}>

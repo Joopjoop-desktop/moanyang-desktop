@@ -3,6 +3,8 @@
   display: flex;
   flex: 1;
   min-width: 0;
+  /* 위 먹이 칸 아래 남은 높이 안에서 달력과 패널이 각자 스크롤한다 */
+  min-height: 0;
 }
 
 .calendar {

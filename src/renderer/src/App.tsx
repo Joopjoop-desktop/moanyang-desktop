@@ -1,21 +1,22 @@
-import { useState } from 'react'
 import { useCoreEvents } from './api/useCoreEvents'
-import { BlockBoard } from './features/board/BlockBoard'
-import { Sidebar } from './features/board/Sidebar'
-import type { StudioView } from './features/board/tabs'
 import { CalendarView } from './features/calendar/CalendarView'
+import { CapturePanel } from './features/capture/CapturePanel'
 import { useCompletedToast } from './features/capture/useCompletedToast'
 
-/** 스튜디오 창: 왼쪽 탭 + 오른쪽 블록 보드 또는 캘린더 (설계 9.6, 7.5) */
+/**
+ * 스튜디오 창: 탭 없는 한 화면. (설계 9.6)
+ * 위 먹이 칸(붙여넣기·실패 카드), 아래 캘린더 + 오른쪽 목록 패널.
+ */
 function App(): React.JSX.Element {
   useCoreEvents()
   useCompletedToast()
-  const [view, setView] = useState<StudioView>('needsInput')
 
   return (
     <div className="app">
-      <Sidebar current={view} onSelect={setView} />
-      {view === 'calendar' ? <CalendarView /> : <BlockBoard filter={view} />}
+      <header className="app-feed">
+        <CapturePanel />
+      </header>
+      <CalendarView />
     </div>
   )
 }

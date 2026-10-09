@@ -6,10 +6,17 @@ import { actionsFor, BLOCK_ACTIONS, runBlockAction, type BlockAction } from './b
 import styles from './BlockActionBar.module.css'
 
 /**
- * 검토·완료·삭제·복구 버튼. 성공하면 알림을 띄우고, 되돌릴 수 있는 동작은 "되돌리기"를 붙인다.
+ * 이대로 두기·완료·삭제·복구 버튼. 성공하면 알림을 띄우고, 되돌릴 수 있는 동작은 "되돌리기"를 붙인다.
  * 화면 갱신은 코어의 blocks:changed가 맡는다. (설계 9.5)
+ * onDone: 성공한 뒤 부르는 곳에 알린다(예: 캘린더 옆 카드에서 삭제·완료하면 목록으로 돌아감).
  */
-export function BlockActionBar({ block }: { block: BlockView }): React.JSX.Element {
+export function BlockActionBar({
+  block,
+  onDone
+}: {
+  block: BlockView
+  onDone?: (action: BlockAction) => void
+}): React.JSX.Element {
   const toast = useToast()
   const mutation = useMutation({
     mutationFn: (action: BlockAction) => runBlockAction(action, block.id),
@@ -19,6 +26,7 @@ export function BlockActionBar({ block }: { block: BlockView }): React.JSX.Eleme
         message: BLOCK_ACTIONS[action].done,
         action: undo ? { label: '되돌리기', run: () => runBlockAction(undo, block.id) } : undefined
       })
+      onDone?.(action)
     },
     onError: (error) => toast.show({ message: messageForError(error) })
   })

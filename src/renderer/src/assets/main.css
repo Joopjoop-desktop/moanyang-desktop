@@ -3,7 +3,14 @@ body {
   background: var(--color-bg);
 }
 
+/* 위 먹이 칸, 아래 캘린더 + 오른쪽 목록 패널 (설계 9.6) */
 .app {
   display: flex;
+  flex-direction: column;
   height: 100%;
+}
+
+.app-feed {
+  flex-shrink: 0;
+  padding: 16px 24px 0;
 }

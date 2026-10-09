@@ -15,22 +15,32 @@ export const BLOCK_ACTIONS: Record<
     undo: BlockAction | null
   }
 > = {
-  review: { label: '검토 완료', done: '검토를 마쳤어요.', undo: 'unreview' },
-  unreview: { label: '검토 취소', done: '검토함으로 돌려놨어요.', undo: null },
+  review: { label: '이대로 두기', done: '날짜 없는 일로 옮겼어요.', undo: 'unreview' },
+  unreview: { label: '이대로 두기 취소', done: '채워 주세요로 돌려놨어요.', undo: null },
   complete: { label: '완료', done: '완료했어요.', undo: 'reopen' },
   reopen: { label: '완료 취소', done: '완료를 취소했어요.', undo: null },
-  delete: { label: '삭제', done: '휴지통으로 옮겼어요.', undo: 'restore' },
+  delete: { label: '삭제', done: '삭제했어요.', undo: 'restore' },
   restore: { label: '복구', done: '복구했어요.', undo: null }
 }
 
-/** 블록 상태에 맞는 버튼. 휴지통 블록은 복구만 할 수 있다. */
+/**
+ * 블록 상태에 맞는 버튼. (설계 7.6, 9.6)
+ * "이대로 두기"는 할 일이 있고 날짜만 빠졌으며 아직 안 했을 때만. 취소는 되돌리기 알림으로만 한다.
+ * 삭제된 블록은 복구만 할 수 있다(화면에는 나오지 않고 되돌리기 알림으로만 복구).
+ */
 export function actionsFor(block: BlockView): BlockAction[] {
   if (block.deletedAt) return ['restore']
   return [
-    block.reviewedAt ? 'unreview' : 'review',
+    ...(canKeepUndated(block) ? (['review'] as const) : []),
     block.completedAt ? 'reopen' : 'complete',
     'delete'
   ]
+}
+
+function canKeepUndated(block: BlockView): boolean {
+  return (
+    block.reviewedAt === null && block.missing.includes('date') && !block.missing.includes('task')
+  )
 }
 
 /** 동작을 코어에 요청한다. 실패하면 ApiError */

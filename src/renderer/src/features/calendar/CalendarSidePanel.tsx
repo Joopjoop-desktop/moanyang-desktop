@@ -4,71 +4,93 @@ import { ApiError } from '../../api/client'
 import { messageForError } from '../../api/errorMessages'
 import { useBlock } from '../../api/queries'
 import { BlockCard } from '../board/BlockCard'
+import { FillList } from '../fill/FillList'
 import { dayOfMonth } from './calendarDates'
 import styles from './CalendarSidePanel.module.css'
 
-/** 오른쪽 패널에 보여줄 것: 블록 하나, 또는 하루에 걸린 블록 목록("+N개") */
-export type PanelContent = { kind: 'block'; blockId: string } | { kind: 'day'; date: string }
+/**
+ * 오른쪽 패널에 보여줄 것 (설계 9.6)
+ * - list: 채워 주세요 / 날짜 없는 일 목록 (기본)
+ * - block: 캘린더에서 누른 블록 하나
+ * - day: 하루에 걸린 블록 목록("+N개")
+ */
+export type PanelContent =
+  { kind: 'list' } | { kind: 'block'; blockId: string } | { kind: 'day'; date: string }
 
 type Props = {
   content: PanelContent
   /** 하루 목록을 그릴 때 쓰는 그날의 블록들 */
   dayEntries: CalendarEntryView[]
   onOpenBlock: (blockId: string) => void
-  onClose: () => void
+  /** "← 목록": 목록으로 돌아간다 */
+  onBack: () => void
 }
 
 /**
- * 캘린더 오른쪽 패널. (설계 7.5 화면)
- * 블록 카드는 6단계 BlockCard를 그대로 써서 날짜 수정·완료·라벨을 그 자리에서 한다.
- * 달력에서는 끌어서 옮기지 않으므로 카드의 끌기는 끈다.
+ * 스튜디오 오른쪽 패널. 항상 열려 있고 기본은 목록이다. (설계 7.5, 9.6)
+ * 블록 카드는 BlockCard를 그대로 써서 그 자리에서 수정한다. 카드에서 삭제·완료하면 목록으로 돌아간다.
  */
 export function CalendarSidePanel({
   content,
   dayEntries,
   onOpenBlock,
-  onClose
+  onBack
 }: Props): React.JSX.Element {
   return (
     <aside className={styles.panel}>
-      <header className={styles.header}>
-        <span className={styles.heading}>
-          {content.kind === 'day' ? dayHeading(content.date) : '블록'}
-        </span>
-        <button type="button" className={styles.close} aria-label="닫기" onClick={onClose}>
-          ×
-        </button>
-      </header>
-      {content.kind === 'block' ? (
-        <BlockDetail blockId={content.blockId} />
+      {content.kind === 'list' ? (
+        <FillList />
       ) : (
-        <ul className={styles.dayList}>
-          {dayEntries.map((entry) => (
-            <li key={entry.blockId}>
-              <button
-                type="button"
-                className={entry.completed ? `${styles.item} ${styles.completed}` : styles.item}
-                onClick={() => onOpenBlock(entry.blockId)}
-              >
-                {entry.title}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <header className={styles.header}>
+            <button type="button" className={styles.back} onClick={onBack}>
+              ← 목록
+            </button>
+            {content.kind === 'day' && (
+              <span className={styles.heading}>{dayHeading(content.date)}</span>
+            )}
+          </header>
+          {content.kind === 'block' ? (
+            <BlockDetail blockId={content.blockId} onLeave={onBack} />
+          ) : (
+            <ul className={styles.dayList}>
+              {dayEntries.map((entry) => (
+                <li key={entry.blockId}>
+                  <button
+                    type="button"
+                    className={entry.completed ? `${styles.item} ${styles.completed}` : styles.item}
+                    onClick={() => onOpenBlock(entry.blockId)}
+                  >
+                    {entry.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </aside>
   )
 }
 
-/** 블록 카드. 삭제되면(휴지통) 찾을 수 없다고 알려준다. 되돌리기로 복구하면 다시 나온다. */
-function BlockDetail({ blockId }: { blockId: string }): React.JSX.Element {
+/**
+ * 블록 카드. 삭제·완료하면 목록으로 돌아간다(onLeave).
+ * 그사이 다른 곳에서 지워지거나 합쳐지면 찾을 수 없다고 알려준다.
+ */
+function BlockDetail({
+  blockId,
+  onLeave
+}: {
+  blockId: string
+  onLeave: () => void
+}): React.JSX.Element {
   const { data, error } = useBlock(blockId)
 
   if (error) {
     const gone = error instanceof ApiError && error.code === 'BLOCK_NOT_FOUND'
     return (
       <p className={styles.message}>
-        {gone ? '블록이 휴지통으로 갔거나 다른 블록에 합쳐졌어요.' : messageForError(error)}
+        {gone ? '블록이 삭제됐거나 다른 블록에 합쳐졌어요.' : messageForError(error)}
       </p>
     )
   }
@@ -77,7 +99,13 @@ function BlockDetail({ blockId }: { blockId: string }): React.JSX.Element {
   // BlockCard는 드래그 훅을 쓰므로 DndContext 안에 둔다(끌기는 꺼져 있다)
   return (
     <DndContext>
-      <BlockCard block={data} draggable={false} />
+      <BlockCard
+        block={data}
+        draggable={false}
+        onAction={(action) => {
+          if (action === 'delete' || action === 'complete') onLeave()
+        }}
+      />
     </DndContext>
   )
 }
