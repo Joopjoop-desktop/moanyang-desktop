@@ -39,17 +39,86 @@
 
 ## 빠른 시작
 
-**요구 사항:** Node.js 24 이상(`.nvmrc`), npm 11 이상, Windows 10 이상. 네이티브 모듈 빌드가 실패하면 Visual Studio Build Tools의 C++ 빌드 도구를 설치합니다.
+Windows 10 이상에서 아래를 **순서대로** 따라 합니다. 명령은 PowerShell이나 Git Bash 어디서 실행해도 됩니다.
+
+### 1. 도구 설치 (PC에 한 번만)
+
+| 도구                        | 버전          | 확인 명령       |
+| --------------------------- | ------------- | --------------- |
+| Git                         | 아무 최신     | `git --version` |
+| Node.js (`.nvmrc`)          | **24.x 이상** | `node -v`       |
+| npm (Node 24에 함께 들어옴) | **11.x 이상** | `npm -v`        |
+| VS Code                     | 아무 최신     | —               |
+
+이미 있으면 확인 명령으로 버전만 봅니다. 없으면 winget으로 설치합니다.
 
 ```bash
-npm install
+winget install --id Git.Git -e
+winget install --id OpenJS.NodeJS -e
+winget install --id Microsoft.VisualStudioCode -e
+```
+
+- 설치한 뒤에는 **터미널을 새로 열어야** `node`, `git` 명령이 잡힙니다.
+- 다른 프로젝트 때문에 Node 버전을 여러 개 써야 하면 nvm-windows(`winget install --id CoreyButler.NVMforWindows -e`)로 `nvm install 24`, `nvm use 24`를 실행합니다.
+- `node -v`가 `v24`보다 낮거나 `npm -v`가 `11`보다 낮으면 다음 단계에서 설치가 바로 멈춥니다(`.npmrc`의 `engine-strict`). 버전부터 맞춥니다.
+
+### 2. 받기
+
+zip으로 받지 말고 **Git으로 clone**합니다. 설치 중에 커밋 검사(husky)를 Git에 연결하기 때문입니다. 개발 기준 브랜치는 `develop`입니다.
+
+```bash
+git clone https://github.com/Joopjoop-desktop/joopjoop-desktop.git
+cd joopjoop-desktop
+git checkout develop
+```
+
+### 3. 설치
+
+```bash
+npm ci
+```
+
+- `npm install`이 아니라 **`npm ci`** 입니다. `package-lock.json`에 적힌 버전 그대로 설치해서 모두 같은 Electron(44.5.1)을 씁니다.
+- 설치가 끝나면 자동으로 ① better-sqlite3를 Electron용으로 다시 빌드(`postinstall`)하고 ② 커밋 검사를 연결(`prepare`)합니다.
+- `npm install`은 패키지를 추가하거나 버전을 올릴 때만 씁니다(`.npmrc`의 `save-exact`로 정확한 버전이 기록됩니다). 그 뒤 바뀐 `package.json`과 `package-lock.json`을 함께 커밋합니다.
+
+### 4. 확인
+
+```bash
+npm run test
+```
+
+모든 테스트가 통과하면 설치가 제대로 된 것입니다. 실패하면 [문제 해결](docs/development.md#문제-해결)을 봅니다(대부분 Electron 실행 파일 또는 better-sqlite3 빌드 문제).
+
+### 5. 실행
+
+```bash
 npm run dev
 ```
 
-- `npm install` 뒤 `postinstall`이 better-sqlite3를 Electron 버전에 맞게 다시 빌드하고, `prepare`가 커밋 검사(husky)를 연결합니다.
-- 스튜디오 창과 오늘 창이 함께 뜹니다. 개발 DB는 `data/joopjoop.db`에 자동으로 만들어집니다.
-- 샘플 데이터: 스튜디오에서 F12 → 콘솔에 `await window.api.dev.seed()` (분류별 샘플 블록 9개).
-- 설치가 안 되거나 실행이 안 되면 [문제 해결](docs/development.md#문제-해결)을 봅니다.
+- 스튜디오 창과 화면 오른쪽 위의 오늘 창이 함께 뜹니다. 개발 DB는 `data/joopjoop.db`에 자동으로 만들어집니다.
+- 직접 먹여 보기: 스튜디오 맨 위 먹이 칸에 `견적서 송부 2026-10-20 11:00`을 붙여넣고 "먹이 주기" → 캘린더 10월 20일에 생깁니다. 상황별 예시 글 10가지는 [따라 해 보기](docs/development.md#따라-해-보기)에 있습니다.
+- 샘플 데이터 한 번에 넣기: 스튜디오에서 F12 → 콘솔에 `await window.api.dev.seed()` (분류별 샘플 블록 9개).
+- 끄기: 터미널에서 `Ctrl+C`, 또는 트레이 아이콘 → 종료.
+
+### 6. VS Code
+
+폴더를 VS Code로 열면 오른쪽 아래에 **권장 확장 설치** 안내가 뜹니다. 설치합니다(ESLint, Prettier, EditorConfig).
+
+- 저장할 때 Prettier로 자동 정리되고 ESLint가 고칠 수 있는 것을 고칩니다(`.vscode/settings.json`).
+- 줄바꿈은 LF, 들여쓰기 2칸입니다(`.editorconfig`, `.gitattributes`).
+- 코어(main process) 디버깅은 실행 구성 **Debug All**을 씁니다.
+
+### (필요할 때만) 네이티브 빌드 도구
+
+3단계에서 better-sqlite3 빌드 에러(`gyp ERR!`, `MSBuild` 등)가 날 때만 설치합니다. 보통은 미리 빌드된 파일을 받아서 필요 없습니다.
+
+```bash
+winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --passive"
+winget install --id Python.Python.3.12 -e
+```
+
+설치한 뒤 터미널을 새로 열고 `npm ci`를 다시 실행합니다.
 
 ### 주요 명령어
 
