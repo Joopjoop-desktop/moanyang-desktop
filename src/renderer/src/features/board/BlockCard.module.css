@@ -47,14 +47,6 @@
   font-size: 12px;
 }
 
-.done {
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--color-success-soft);
-  color: var(--color-success);
-  font-size: 12px;
-}
-
 .elements {
   display: flex;
   flex-direction: column;

@@ -24,17 +24,14 @@ export const BLOCK_ACTIONS: Record<
 }
 
 /**
- * 블록 상태에 맞는 버튼. (설계 7.6, 9.6)
+ * 카드 아래 버튼. (설계 7.6, 9.6)
  * "이대로 두기"는 할 일이 있고 날짜만 빠졌으며 아직 안 했을 때만. 취소는 되돌리기 알림으로만 한다.
+ * 완료·완료 취소는 버튼이 아니라 카드 맨 위 체크박스로 한다(10단계).
  * 삭제된 블록은 복구만 할 수 있다(화면에는 나오지 않고 되돌리기 알림으로만 복구).
  */
 export function actionsFor(block: BlockView): BlockAction[] {
   if (block.deletedAt) return ['restore']
-  return [
-    ...(canKeepUndated(block) ? (['review'] as const) : []),
-    block.completedAt ? 'reopen' : 'complete',
-    'delete'
-  ]
+  return [...(canKeepUndated(block) ? (['review'] as const) : []), 'delete']
 }
 
 function canKeepUndated(block: BlockView): boolean {

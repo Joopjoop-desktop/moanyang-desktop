@@ -48,24 +48,24 @@ describe('블록 상태 버튼 (설계 9.6)', () => {
     vi.unstubAllGlobals()
   })
 
-  it('할 일이 있고 날짜만 빠졌으면 이대로 두기, 완료, 삭제 (설계 7.6)', () => {
-    expect(actionsFor(block({ missing: ['date'] }))).toEqual(['review', 'complete', 'delete'])
+  it('할 일이 있고 날짜만 빠졌으면 이대로 두기, 삭제 (설계 7.6)', () => {
+    expect(actionsFor(block({ missing: ['date'] }))).toEqual(['review', 'delete'])
   })
 
   it('할 일이 없거나 날짜 확인이 필요하거나 빠진 게 없으면 이대로 두기가 없다', () => {
     for (const missing of [['task', 'date'], ['task'], ['dateConfirm'], []] as const) {
-      expect(actionsFor(block({ missing: [...missing] }))).toEqual(['complete', 'delete'])
+      expect(actionsFor(block({ missing: [...missing] }))).toEqual(['delete'])
     }
   })
 
-  it('이미 이대로 두기 했거나 완료한 블록은 완료 취소, 삭제', () => {
+  it('완료는 버튼에 없다(맨 위 체크박스). 이미 이대로 두기 했으면 삭제만', () => {
     const done = block({
       missing: ['date'],
       reviewedAt: '2026-10-07T01:00:00.000Z',
       completedAt: '2026-10-07T02:00:00.000Z'
     })
 
-    expect(actionsFor(done)).toEqual(['reopen', 'delete'])
+    expect(actionsFor(done)).toEqual(['delete'])
   })
 
   it('삭제된 블록은 복구만', () => {
