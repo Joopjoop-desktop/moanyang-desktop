@@ -14,7 +14,7 @@ export type TrayMenuItem = { label: string; click: () => void } | { type: 'separ
 export function trayMenuItems(overlayVisible: boolean, actions: TrayActions): TrayMenuItem[] {
   return [
     { label: '스튜디오 열기', click: actions.openStudio },
-    { label: overlayVisible ? '캐릭터 숨기기' : '캐릭터 보이기', click: actions.toggleOverlay },
+    { label: overlayVisible ? '오늘 창 숨기기' : '오늘 창 보이기', click: actions.toggleOverlay },
     { type: 'separator' },
     { label: '종료', click: actions.quit }
   ]

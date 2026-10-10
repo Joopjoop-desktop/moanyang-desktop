@@ -7,6 +7,9 @@
   gap: 6px;
   height: 100%;
   padding-bottom: 6px;
+  /* 임시: 창 가장자리가 보이게. 오늘 창 화면을 만들 때 바뀐다 */
+  border: 2px dashed var(--color-accent);
+  background: rgba(255, 255, 255, 0.6);
 }
 
 /* 캐릭터 몸: 먹이를 놓는 곳, 누르면 붙여넣기 모드 */

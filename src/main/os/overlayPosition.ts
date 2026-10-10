@@ -1,18 +1,19 @@
 /**
- * 캐릭터 창 위치 계산. Electron에 의존하지 않는 순수 계산이라 테스트로 확인한다. (설계 9.7)
+ * 오늘 창 위치 계산. Electron에 의존하지 않는 순수 계산이라 테스트로 확인한다. (설계 9.7)
  */
 
 export type Point = { x: number; y: number }
-export type Rect = Point & { width: number; height: number }
+export type Size = { width: number; height: number }
+export type Rect = Point & Size
 
-/** 작업 영역 오른쪽 아래에서 띄우는 간격 */
+/** 작업 영역 가장자리에서 띄우는 간격 */
 export const OVERLAY_MARGIN = 24
 
-/** 기본 위치: 주 모니터 작업 영역(작업표시줄을 뺀 곳) 오른쪽 아래 */
-export function defaultOverlayPosition(workArea: Rect, size: number): Point {
+/** 기본 위치: 주 모니터 작업 영역(작업표시줄을 뺀 곳) 오른쪽 위 */
+export function defaultOverlayPosition(workArea: Rect, size: Size): Point {
   return {
-    x: workArea.x + workArea.width - size - OVERLAY_MARGIN,
-    y: workArea.y + workArea.height - size - OVERLAY_MARGIN
+    x: workArea.x + workArea.width - size.width - OVERLAY_MARGIN,
+    y: workArea.y + OVERLAY_MARGIN
   }
 }
 
@@ -25,10 +26,10 @@ export function resolveOverlayPosition(
   saved: Point | undefined,
   workAreas: readonly Rect[],
   primaryWorkArea: Rect,
-  size: number
+  size: Size
 ): Point {
   if (saved) {
-    const center = { x: saved.x + size / 2, y: saved.y + size / 2 }
+    const center = { x: saved.x + size.width / 2, y: saved.y + size.height / 2 }
     if (workAreas.some((area) => contains(area, center))) return saved
   }
   return defaultOverlayPosition(primaryWorkArea, size)

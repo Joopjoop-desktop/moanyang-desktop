@@ -5,13 +5,17 @@ import type { Point } from './overlayPosition'
 
 /**
  * 창 만들기. (설계 9.7)
- * 화면 진입점: index.html(스튜디오), overlay.html(캐릭터). 두 창 모두 같은 preload(window.api)를 쓴다.
+ * 화면 진입점: index.html(스튜디오), overlay.html(오늘 창). 두 창 모두 같은 preload(window.api)를 쓴다.
  */
 
 type RendererPage = 'index' | 'overlay'
 
-/** 캐릭터 창 크기 (가로·세로 같음) */
-export const OVERLAY_SIZE = 160
+/** 오늘 창: 폭은 고정, 높이는 세로로만 조절 (설계 9.7) */
+export const TODAY_WIDTH = 260
+export const TODAY_DEFAULT_HEIGHT = 420
+export const TODAY_MIN_HEIGHT = 160
+/** 접었을 때 높이 = 화면의 머리줄 높이 (오늘 창 CSS와 같아야 한다) */
+export const TODAY_COLLAPSED_HEIGHT = 40
 
 /** 두 창 공통 보안 설정 (설계 11장) */
 const webPreferences: Electron.WebPreferences = {
@@ -36,30 +40,48 @@ export function createStudioWindow(): BrowserWindow {
   return window
 }
 
+type OverlayCallbacks = {
+  /** 머리줄로 옮긴 뒤 새 위치 (저장은 부르는 쪽이 한다) */
+  onMoved: (position: Point) => void
+  /** 가장자리를 끌어 높이를 바꾼 뒤 새 높이. 접혀 있을 때는 오지 않는다 */
+  onResized: (height: number) => void
+}
+
 /**
- * 캐릭터 창: 투명·테두리 없음·항상 위·작업표시줄에 안 보임·크기 고정.
+ * 오늘 창: 투명·테두리 없음·항상 위·작업표시줄에 안 보임. 폭 고정, 세로로만 크기 조절.
+ * 투명·테두리 없는 창도 Windows에서 가장자리 끌기로 세로 크기 조절이 되는 것을 확인했다 (설계 9.7).
  * 보일 때 다른 앱의 초점을 뺏지 않는다(showInactive).
- * 사용자가 손잡이로 옮기면 onMoved로 새 위치를 알린다(저장은 부르는 쪽이 한다).
  */
 export function createOverlayWindow(
   position: Point,
-  onMoved: (position: Point) => void
+  layout: { height: number; collapsed: boolean },
+  callbacks: OverlayCallbacks
 ): BrowserWindow {
   const window = new BrowserWindow({
-    width: OVERLAY_SIZE,
-    height: OVERLAY_SIZE,
+    width: TODAY_WIDTH,
+    height: layout.height,
     x: position.x,
     y: position.y,
+    minWidth: TODAY_WIDTH,
+    maxWidth: TODAY_WIDTH,
+    minHeight: TODAY_MIN_HEIGHT,
     show: false,
     frame: false,
     transparent: true,
     hasShadow: false,
-    resizable: false,
+    resizable: true,
     maximizable: false,
     minimizable: false,
     fullscreenable: false,
     skipTaskbar: true,
     webPreferences
+  })
+  if (layout.collapsed) setOverlayCollapsed(window, true, layout.height)
+
+  // 'resized'는 끌기를 놓았을 때 한 번 온다. 접힌 동안의 크기 변경은 펼친 높이가 아니므로 무시한다
+  window.on('resized', () => {
+    if (!window.isResizable()) return
+    callbacks.onResized(window.getSize()[1])
   })
 
   // 일반 창보다 위에 둔다. 'floating'은 다른 앱의 일반 창 위에 머무는 단계다.
@@ -68,11 +90,32 @@ export function createOverlayWindow(
   // 'moved'는 끌기를 놓았을 때 한 번 온다 (끄는 중에 계속 오는 'move'와 다름)
   window.on('moved', () => {
     const [x, y] = window.getPosition()
-    onMoved({ x, y })
+    callbacks.onMoved({ x, y })
   })
   denyNewWindows(window)
   loadPage(window, 'overlay')
   return window
+}
+
+/**
+ * 오늘 창 접기·펼치기 (설계 9.7).
+ * 투명 부분도 클릭을 막으므로 화면만 접지 않고 창 높이를 머리줄 높이로 줄인다.
+ * 접힌 동안은 크기 조절을 끄고, 펼치면 expandedHeight로 돌아간다.
+ */
+export function setOverlayCollapsed(
+  window: BrowserWindow,
+  collapsed: boolean,
+  expandedHeight: number
+): void {
+  if (collapsed) {
+    window.setResizable(false)
+    window.setMinimumSize(TODAY_WIDTH, TODAY_COLLAPSED_HEIGHT)
+    window.setSize(TODAY_WIDTH, TODAY_COLLAPSED_HEIGHT)
+  } else {
+    window.setMinimumSize(TODAY_WIDTH, TODAY_MIN_HEIGHT)
+    window.setSize(TODAY_WIDTH, expandedHeight)
+    window.setResizable(true)
+  }
 }
 
 /** 개발 모드는 Vite 개발 서버, 배포는 빌드된 파일을 연다 */

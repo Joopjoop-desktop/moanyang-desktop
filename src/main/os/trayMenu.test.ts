@@ -18,16 +18,16 @@ function labels(items: ReturnType<typeof trayMenuItems>): string[] {
 }
 
 describe('트레이 메뉴 (설계 9.7)', () => {
-  it('스튜디오 열기 / 캐릭터 숨기기·보이기 / 종료', () => {
+  it('스튜디오 열기 / 오늘 창 숨기기·보이기 / 종료', () => {
     const { actions } = recordingActions()
 
     expect(labels(trayMenuItems(true, actions))).toEqual([
       '스튜디오 열기',
-      '캐릭터 숨기기',
+      '오늘 창 숨기기',
       '---',
       '종료'
     ])
-    expect(labels(trayMenuItems(false, actions))[1]).toBe('캐릭터 보이기')
+    expect(labels(trayMenuItems(false, actions))[1]).toBe('오늘 창 보이기')
   })
 
   it('항목을 누르면 맞는 동작을 부른다', () => {

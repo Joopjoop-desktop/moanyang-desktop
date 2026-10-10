@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { IpcChannel, IpcResponse, IpcResult } from '@shared/ipc'
 import { CAPTURE_TEXT_MAX_LENGTH } from '@shared/captures'
 import { IPC_CHANNELS } from '@shared/ipc'
+import type { TodayWindowState } from '@shared/today'
 import { MockExtractor } from '../extraction/mockExtractor'
 import { createServices, type Services } from '../services'
 import { ExtractionQueue } from '../services/extractionQueue'
@@ -19,6 +20,7 @@ describe('IPC 채널 핸들러', () => {
   let handlers: IpcHandlers
   let queue: ExtractionQueue
   let openedStudio: number
+  let today: TodayWindowState
   let services: Services
 
   beforeEach(() => {
@@ -31,7 +33,13 @@ describe('IPC 채널 핸들러', () => {
       notifier: ctx.notifier
     })
     openedStudio = 0
-    handlers = createIpcHandlers(services, queue, { openStudio: () => openedStudio++ })
+    today = { opacity: 90, collapsed: false }
+    handlers = createIpcHandlers(services, queue, {
+      openStudio: () => openedStudio++,
+      todayState: () => today,
+      setTodayOpacity: (opacity) => (today = { ...today, opacity }),
+      setTodayCollapsed: (collapsed) => (today = { ...today, collapsed })
+    })
     seedBlock(ctx.repos, 'a')
     seedBlock(ctx.repos, 'b')
     seedElement(ctx.repos, 'a-task', 'a', 'task', 0, { value: '견적서' })
@@ -220,7 +228,12 @@ describe('IPC 채널 핸들러', () => {
       timezone: 'Asia/Seoul',
       notifier: ctx.notifier
     })
-    const slow = createIpcHandlers(services, slowQueue, { openStudio: () => undefined })
+    const slow = createIpcHandlers(services, slowQueue, {
+      openStudio: () => undefined,
+      todayState: () => today,
+      setTodayOpacity: () => today,
+      setTodayCollapsed: () => today
+    })
     const count = async (): Promise<unknown> =>
       handleIpcRequest(slow, 'capture:unfinishedCount', undefined)
 
@@ -244,6 +257,26 @@ describe('IPC 채널 핸들러', () => {
   it('window:openStudio는 스튜디오를 연다', async () => {
     expect(await ok('window:openStudio', undefined)).toBeNull()
     expect(openedStudio).toBe(1)
+  })
+
+  it('today:*는 오늘 창 상태를 읽고 바꾼다 (설계 9.7)', async () => {
+    expect(await ok('today:getState', undefined)).toEqual({ opacity: 90, collapsed: false })
+    expect(await ok('today:setOpacity', { opacity: 50 })).toEqual({
+      opacity: 50,
+      collapsed: false
+    })
+    expect(await ok('today:setCollapsed', { collapsed: true })).toEqual({
+      opacity: 50,
+      collapsed: true
+    })
+
+    // 투명도는 30~100 정수만
+    for (const opacity of [29, 101, 50.5]) {
+      expect(await call('today:setOpacity', { opacity })).toMatchObject({
+        ok: false,
+        error: { code: 'INVALID_INPUT' }
+      })
+    }
   })
 
   describe('입력 검증', () => {

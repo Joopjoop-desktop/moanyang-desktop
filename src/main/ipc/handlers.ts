@@ -1,3 +1,4 @@
+import type { TodayWindowState } from '@shared/today'
 import type { Services } from '../services'
 import type { ExtractionQueue } from '../services/extractionQueue'
 import type { IpcHandlers } from './router'
@@ -6,6 +7,10 @@ import * as schemas from './schemas'
 /** 창 다루기. Electron 창은 앱 시작 코드가 갖고 있어 함수로 받는다 (테스트는 가짜). */
 export type WindowControls = {
   openStudio: () => void
+  /** 오늘 창 (설계 9.7). 바꾼 뒤의 상태를 돌려준다 */
+  todayState: () => TodayWindowState
+  setTodayOpacity: (opacity: number) => TodayWindowState
+  setTodayCollapsed: (collapsed: boolean) => TodayWindowState
 }
 
 /**
@@ -156,6 +161,19 @@ export function createIpcHandlers(
         windows.openStudio()
         return null
       }
+    },
+
+    'today:getState': {
+      schema: schemas.noRequest,
+      handle: () => windows.todayState()
+    },
+    'today:setOpacity': {
+      schema: schemas.todayOpacityRequest,
+      handle: ({ opacity }) => windows.setTodayOpacity(opacity)
+    },
+    'today:setCollapsed': {
+      schema: schemas.todayCollapsedRequest,
+      handle: ({ collapsed }) => windows.setTodayCollapsed(collapsed)
     }
   }
 }

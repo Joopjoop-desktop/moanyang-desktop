@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { CAPTURE_TEXT_MAX_LENGTH } from '@shared/captures'
 import { CAPTURE_METHODS, ELEMENT_TYPES } from '@shared/model'
+import { TODAY_OPACITY_MAX, TODAY_OPACITY_MIN } from '@shared/today'
 import { BLOCK_LIST_FILTERS } from '@shared/views'
 import { isValidDate } from '../domain/calendarValues'
 
@@ -79,6 +80,12 @@ export const conflictCheckRequest = z.discriminatedUnion('kind', [
 ])
 
 export const labelLinkRequest = z.object({ blockId: id, labelId: id })
+
+/** 오늘 창 투명도(%): 30~100 정수 (설계 9.7) */
+export const todayOpacityRequest = z.object({
+  opacity: z.number().int().min(TODAY_OPACITY_MIN).max(TODAY_OPACITY_MAX)
+})
+export const todayCollapsedRequest = z.object({ collapsed: z.boolean() })
 
 /** 달력에 있는 날짜(YYYY-MM-DD)만. 2026-02-30 같은 없는 날짜는 거절 */
 const calendarDate = z.string().refine(isValidDate, '달력에 있는 YYYY-MM-DD 날짜여야 합니다')
