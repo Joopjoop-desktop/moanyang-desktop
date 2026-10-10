@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CalendarEntryView } from '@shared/calendar'
 import { messageForError } from '../../api/errorMessages'
 import { useCalendar } from '../../api/queries'
@@ -34,6 +34,12 @@ export function CalendarView(): React.JSX.Element {
 
   const openBlock = (blockId: string): void => setPanel({ kind: 'block', blockId })
   const openDay = (date: string): void => setPanel({ kind: 'day', date })
+
+  // 오늘 창의 "스튜디오에서 열기": 캘린더 항목을 누른 것과 같이 오른쪽에 블록 카드를 연다 (설계 9.6)
+  useEffect(
+    () => window.api.on('studio:openBlock', ({ blockId }) => setPanel({ kind: 'block', blockId })),
+    []
+  )
 
   return (
     <div className={styles.layout}>

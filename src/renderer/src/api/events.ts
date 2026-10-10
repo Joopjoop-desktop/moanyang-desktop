@@ -21,7 +21,10 @@ export function keysToRefresh(event: IpcEvent): QueryKey[] {
     case 'capture:failed':
       return [queryKeys.failedCaptures]
     case 'capture:unfinishedChanged':
-      // 캐릭터 표정용. 스튜디오가 다시 불러올 데이터는 없다
+      // 오늘 창 서랍용. 다시 불러올 데이터는 없다
+      return []
+    case 'studio:openBlock':
+      // 화면을 바꾸라는 신호일 뿐 데이터는 그대로다
       return []
   }
 }

@@ -1,6 +1,7 @@
 import { app, dialog, ipcMain, screen, BrowserWindow } from 'electron'
 import { join } from 'path'
-import { DEV_IPC_CHANNELS, IPC_CHANNELS } from '@shared/ipc'
+import { DEV_IPC_CHANNELS, IPC_CHANNELS, type IpcEvents } from '@shared/ipc'
+import type { TodayWindowState } from '@shared/today'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import type { DatabaseConnection } from './db/connection'
 import { initDatabase } from './db'
@@ -18,8 +19,16 @@ import { resolveDataDir } from './db/paths'
 import { resolveOverlayPosition } from './os/overlayPosition'
 import { QuitGate } from './os/quitGate'
 import { SettingsFile } from './os/settingsFile'
+import { clampOpacity, resolveTodayLayout, type TodayLayout } from './os/todayWindowState'
 import { createTray } from './os/tray'
-import { createOverlayWindow, createStudioWindow, OVERLAY_SIZE } from './os/windows'
+import {
+  createOverlayWindow,
+  createStudioWindow,
+  setOverlayCollapsed,
+  TODAY_DEFAULT_HEIGHT,
+  TODAY_MIN_HEIGHT,
+  TODAY_WIDTH
+} from './os/windows'
 
 const SETTINGS_FILE_NAME = 'settings.json'
 
@@ -29,6 +38,13 @@ let database: DatabaseConnection | null = null
 let queue: ExtractionQueue | null = null
 let studio: BrowserWindow | null = null
 let overlay: BrowserWindow | null = null
+/** 이 PC에만 의미 있는 설정(오늘 창 위치·높이·투명도·접힘). 앱이 준비된 뒤 만든다 */
+let settings: SettingsFile | null = null
+/** 오늘 창의 지금 값. 창을 띄울 때 설정 파일에서 읽는다 */
+let todayLayout: TodayLayout = resolveTodayLayout(undefined, {
+  defaultHeight: TODAY_DEFAULT_HEIGHT,
+  minHeight: TODAY_MIN_HEIGHT
+})
 /** 버려지면 트레이 아이콘이 사라지므로 계속 들고 있는다 */
 let tray: ReturnType<typeof createTray> | null = null
 
@@ -65,29 +81,39 @@ function hideOnClose(window: BrowserWindow): void {
   })
 }
 
-/** 스튜디오·캐릭터 창과 트레이를 띄운다 (설계 9.7) */
+/** 스튜디오·오늘 창과 트레이를 띄운다 (설계 9.7) */
 function openWindows(): void {
   studio = createStudioWindow()
   hideOnClose(studio)
 
-  // 캐릭터 창은 지난번 위치에 띄운다. 그 위치가 지금 화면 밖이면 기본 위치로
-  const settings = new SettingsFile(join(resolveDataDir(), SETTINGS_FILE_NAME))
+  // 오늘 창은 지난번 위치·높이·투명도·접힘으로 띄운다. 위치가 지금 화면 밖이면 기본 위치로
+  const file = new SettingsFile(join(resolveDataDir(), SETTINGS_FILE_NAME))
+  settings = file
+  const saved = file.read()
+  todayLayout = resolveTodayLayout(saved.today, {
+    defaultHeight: TODAY_DEFAULT_HEIGHT,
+    minHeight: TODAY_MIN_HEIGHT
+  })
   const position = resolveOverlayPosition(
-    settings.read().overlay,
+    saved.overlay,
     screen.getAllDisplays().map((display) => display.workArea),
     screen.getPrimaryDisplay().workArea,
-    OVERLAY_SIZE
+    { width: TODAY_WIDTH, height: todayLayout.height }
   )
-  overlay = createOverlayWindow(position, (moved) => settings.update({ overlay: moved }))
-  // 캐릭터 창에 초점이 있을 때 Alt+F4를 눌러도 숨기기로 (트레이에서 다시 보이기)
+  overlay = createOverlayWindow(position, todayLayout, {
+    onMoved: (moved) => file.update({ overlay: moved }),
+    onResized: (height) => saveTodayLayout({ height })
+  })
+  // 오늘 창에 초점이 있을 때 Alt+F4를 눌러도 숨기기로 (트레이에서 다시 보이기)
   hideOnClose(overlay)
 
   tray = createTray(
-    { openStudio, toggleOverlay, quit: () => app.quit() },
+    // 트레이·메뉴 클릭은 이벤트 객체를 첫 인자로 넘기므로 blockId로 잘못 받지 않게 감싼다
+    { openStudio: () => openStudio(), toggleOverlay, quit: () => app.quit() },
     () => overlay?.isVisible() ?? false
   )
-  // 메뉴 글자(숨기기·보이기)는 캐릭터 창이 실제로 보이거나 숨을 때마다 맞춘다.
-  // 트레이는 캐릭터 창이 화면에 뜨기(ready-to-show) 전에 만들어지므로, 처음 뜰 때도 여기서 맞춰진다.
+  // 메뉴 글자(숨기기·보이기)는 오늘 창이 실제로 보이거나 숨을 때마다 맞춘다.
+  // 트레이는 오늘 창이 화면에 뜨기(ready-to-show) 전에 만들어지므로, 처음 뜰 때도 여기서 맞춰진다.
   // ready-to-show는 windows.ts가 먼저 등록한 showInactive 다음에 불려서, 처음 뜬 직후에 한 번 더 맞춘다.
   const refreshTray = (): void => tray?.refresh()
   overlay.on('ready-to-show', refreshTray)
@@ -95,15 +121,45 @@ function openWindows(): void {
   overlay.on('hide', refreshTray)
 }
 
-/** 스튜디오를 앞으로 가져온다 (캐릭터 더블클릭, 트레이, 설계 9.7) */
-function openStudio(): void {
+/** 오늘 창 값 일부를 바꾸고 설정 파일에 저장한다 (설계 9.7) */
+function saveTodayLayout(patch: Partial<TodayLayout>): TodayWindowState {
+  todayLayout = { ...todayLayout, ...patch }
+  settings?.update({ today: todayLayout })
+  return { opacity: todayLayout.opacity, collapsed: todayLayout.collapsed }
+}
+
+/** 오늘 창 IPC가 쓰는 창 다루기 (today:*) */
+const todayControls = {
+  todayState: (): TodayWindowState => ({
+    opacity: todayLayout.opacity,
+    collapsed: todayLayout.collapsed
+  }),
+  setTodayOpacity: (opacity: number): TodayWindowState =>
+    saveTodayLayout({ opacity: clampOpacity(opacity) }),
+  setTodayCollapsed: (collapsed: boolean): TodayWindowState => {
+    if (overlay && !overlay.isDestroyed()) {
+      setOverlayCollapsed(overlay, collapsed, todayLayout.height)
+    }
+    return saveTodayLayout({ collapsed })
+  }
+}
+
+/**
+ * 스튜디오를 앞으로 가져온다 (오늘 창, 트레이, 설계 9.7).
+ * blockId가 있으면 스튜디오 창에만 studio:openBlock을 보내 오른쪽 패널에 그 블록 카드를 연다.
+ */
+function openStudio(blockId?: string): void {
   if (!studio || studio.isDestroyed()) return
   if (studio.isMinimized()) studio.restore()
   studio.show()
   studio.focus()
+  if (blockId) {
+    const payload: IpcEvents['studio:openBlock'] = { blockId }
+    studio.webContents.send('studio:openBlock', payload)
+  }
 }
 
-/** 캐릭터 숨기기·보이기 (트레이 메뉴). 보일 때 다른 앱의 초점을 뺏지 않는다. */
+/** 오늘 창 숨기기·보이기 (트레이 메뉴). 보일 때 다른 앱의 초점을 뺏지 않는다. */
 function toggleOverlay(): void {
   if (!overlay || overlay.isDestroyed()) return
   if (overlay.isVisible()) overlay.hide()
@@ -166,14 +222,14 @@ app.whenReady().then(() => {
 
   // 개발 전용 채널(dev:*)은 개발 빌드에서만 등록한다. preload와 같은 빌드 시점 값을 써서
   // 배포 빌드에서는 이 분기가 통째로 빠진다 (설계 9.1)
-  // 10단계 전까지는 배포 빌드도 MockExtractor. 개발 모드는 처리 중 상태가 보이도록 지연을 둔다 (설계 8.8)
+  // 11단계 전까지는 배포 빌드도 MockExtractor. 개발 모드는 처리 중 상태가 보이도록 지연을 둔다 (설계 8.8)
   queue = new ExtractionQueue({
     captures: services.captures,
     extractor: new MockExtractor({ delayMs: import.meta.env.DEV ? 1_500 : 0 }),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     notifier: deps.notifier
   })
-  const windows = { openStudio }
+  const windows = { openStudio, ...todayControls }
 
   if (import.meta.env.DEV) {
     const handlers = {

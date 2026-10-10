@@ -1,4 +1,4 @@
-/* 캐릭터 창은 배경이 투명해야 캐릭터만 떠 보인다 (창도 transparent: true) */
+/* 오늘 창은 배경이 투명해야 둥근 판만 떠 보이고 투명도를 줄 수 있다 (창도 transparent: true) */
 html,
 body {
   background: transparent;

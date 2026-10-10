@@ -28,3 +28,16 @@
   margin-left: auto;
   color: var(--color-warn);
 }
+
+/* 카드 맨 위 완료 체크박스 */
+.check {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.check:disabled {
+  cursor: default;
+}

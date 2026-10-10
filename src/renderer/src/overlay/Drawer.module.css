@@ -1,0 +1,105 @@
+/* 오늘 창 아래 서랍 (설계 9.7) */
+.footer {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-sidebar);
+}
+
+.drawer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition:
+    min-height 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.drawer:hover {
+  border-color: var(--color-accent);
+}
+
+/* 글을 끌고 왔을 때: 서랍이 열리듯 커지고 강조 */
+.open {
+  min-height: 88px;
+  border-style: solid;
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+/* 눌러서 Ctrl+V를 기다릴 때 */
+.waiting {
+  border-style: solid;
+  border-color: var(--color-accent);
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: 18px;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  /* 추출 결과 두 문장은 줄을 나눠 보여준다 */
+  white-space: pre-line;
+  word-break: keep-all;
+}
+
+/* 결과 알림 (3초) */
+.done .text {
+  color: var(--color-success);
+}
+
+.empty .text {
+  color: var(--color-text);
+}
+
+.failed .text {
+  color: var(--color-warn);
+}
+
+/* Ctrl+V를 받는 보이지 않는 입력칸 */
+.pasteCatcher {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  resize: none;
+}
+
+/* 채워 주세요 N → 스튜디오 */
+.fill {
+  align-self: flex-end;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fill:hover {
+  background: var(--color-accent-soft);
+}
+
+.fillCount {
+  font-weight: 600;
+}

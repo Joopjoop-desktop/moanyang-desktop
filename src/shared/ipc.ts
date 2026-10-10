@@ -10,6 +10,7 @@ import type {
   MoveResult,
   MoveTarget
 } from './moves'
+import type { TodayWindowState } from './today'
 import type { AttachedLabelView, BlockListFilter, BlockView, ElementView, LabelView } from './views'
 
 /**
@@ -63,8 +64,15 @@ export type IpcContract = {
   /** 기간(from~to, YYYY-MM-DD, 양 끝 포함)과 겹치는 블록의 달력 표시 (설계 7.5) */
   'calendar:list': Contract<{ from: string; to: string }, CalendarEntryView[]>
 
-  /** 스튜디오 창 열기 (캐릭터 더블클릭, 설계 9.7) */
-  'window:openStudio': Contract<void, null>
+  /** 스튜디오 창 열기. blockId를 주면 오른쪽 패널에 그 블록 카드를 연다 (설계 9.7) */
+  'window:openStudio': Contract<{ blockId?: string } | void, null>
+
+  /** 오늘 창 상태: 투명도·접힘 (설계 9.7) */
+  'today:getState': Contract<void, TodayWindowState>
+  /** 투명도 저장 (30~100) */
+  'today:setOpacity': Contract<{ opacity: number }, TodayWindowState>
+  /** 접기·펼치기. 코어가 창 높이를 바꾸고 저장한다 */
+  'today:setCollapsed': Contract<{ collapsed: boolean }, TodayWindowState>
 
   /** 개발 모드 전용: 콘솔 확인용 샘플 블록 생성 */
   'dev:seed': Contract<void, BlockView[]>
@@ -99,7 +107,10 @@ export const IPC_CHANNELS = [
   'label:attach',
   'label:detach',
   'calendar:list',
-  'window:openStudio'
+  'window:openStudio',
+  'today:getState',
+  'today:setOpacity',
+  'today:setCollapsed'
 ] as const satisfies readonly IpcChannel[]
 
 /** 개발 모드에서만 등록·노출하는 채널 */
@@ -115,7 +126,6 @@ export const ALL_CHANNELS_LISTED: [MissingChannel] extends [never] ? true : Miss
 /** 코어 → UI 이벤트 (설계 9.4) */
 export type IpcEvents = {
   'blocks:changed': { blockIds: string[] }
-  /** 추출 완료. blockIds가 빈 배열이면 할 일 없음 (설계 8.1) */
   /**
    * 추출 완료 (설계 8.1). toCalendar: 빠진 것이 없어 바로 캘린더에 들어간 블록 수,
    * needsInput: 채워 주세요로 간 블록 수. 둘의 합은 blockIds 길이와 같다
@@ -129,6 +139,8 @@ export type IpcEvents = {
   'capture:failed': { captureId: string; errorCode: CaptureErrorCode; canRetry: boolean }
   /** 미완료 먹이 수가 바뀜 (설계 9.4) */
   'capture:unfinishedChanged': { count: number }
+  /** 스튜디오에 블록 카드 열기. window:openStudio에 blockId가 있을 때 스튜디오 창에만 보낸다 */
+  'studio:openBlock': { blockId: string }
 }
 export type IpcEvent = keyof IpcEvents
 
