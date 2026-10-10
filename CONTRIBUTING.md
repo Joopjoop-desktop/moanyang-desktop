@@ -40,6 +40,7 @@ git checkout -b feat/#번호-작업내용
 
 - 커밋할 때 husky가 바뀐 파일에 ESLint·Prettier를 실행합니다. 검사를 건너뛰지 않습니다(`--no-verify` 금지).
 - 마이그레이션이 들어간 PR은 스키마와 SQL이 같은 커밋에 있는지 확인합니다([DB 작업](docs/development.md#db-작업)).
+- 패키지를 추가·변경한 PR은 `package.json`과 `package-lock.json`이 함께 바뀌었는지 확인합니다. 다른 사람은 받은 뒤 `npm ci`로 다시 설치합니다.
 
 ## 커밋 메시지
 
