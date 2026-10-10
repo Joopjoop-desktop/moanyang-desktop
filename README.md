@@ -6,6 +6,7 @@
 
 | 문서                                         | 내용                                                         |
 | -------------------------------------------- | ------------------------------------------------------------ |
+| [`docs/features.md`](docs/features.md)       | 기획·디자인용 기능 명세: 화면, 기능, 사용 흐름, 화면 문구    |
 | [`docs/design.md`](docs/design.md)           | **기준 문서.** 데이터 모델, 도메인 규칙, IPC 명세, 개발 순서 |
 | [`docs/development.md`](docs/development.md) | 콘솔에서 코어 호출, DB 작업, 디버깅, 문제 해결               |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md)         | 브랜치·커밋·이슈·PR 흐름                                     |
