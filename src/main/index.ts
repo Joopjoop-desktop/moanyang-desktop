@@ -166,7 +166,7 @@ app.whenReady().then(() => {
 
   // 개발 전용 채널(dev:*)은 개발 빌드에서만 등록한다. preload와 같은 빌드 시점 값을 써서
   // 배포 빌드에서는 이 분기가 통째로 빠진다 (설계 9.1)
-  // 10단계 전까지는 배포 빌드도 MockExtractor. 개발 모드는 처리 중 상태가 보이도록 지연을 둔다 (설계 8.8)
+  // 11단계 전까지는 배포 빌드도 MockExtractor. 개발 모드는 처리 중 상태가 보이도록 지연을 둔다 (설계 8.8)
   queue = new ExtractionQueue({
     captures: services.captures,
     extractor: new MockExtractor({ delayMs: import.meta.env.DEV ? 1_500 : 0 }),
