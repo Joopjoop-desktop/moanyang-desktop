@@ -28,6 +28,9 @@ export const blockIdRequest = z.object({ blockId: id })
 export const elementIdRequest = z.object({ elementId: id })
 export const noRequest = z.undefined()
 
+/** 스튜디오 열기: 요청 없이, 또는 열어 둘 블록과 함께 (설계 9.7) */
+export const openStudioRequest = z.object({ blockId: id.optional() }).optional()
+
 export const blockListRequest = z.object({ filter: z.enum(BLOCK_LIST_FILTERS) })
 
 export const blockReviewRequest = z.object({ blockId: id, reviewed: z.boolean() })

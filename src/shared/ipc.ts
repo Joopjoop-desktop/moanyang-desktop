@@ -64,8 +64,8 @@ export type IpcContract = {
   /** 기간(from~to, YYYY-MM-DD, 양 끝 포함)과 겹치는 블록의 달력 표시 (설계 7.5) */
   'calendar:list': Contract<{ from: string; to: string }, CalendarEntryView[]>
 
-  /** 스튜디오 창 열기 (설계 9.7) */
-  'window:openStudio': Contract<void, null>
+  /** 스튜디오 창 열기. blockId를 주면 오른쪽 패널에 그 블록 카드를 연다 (설계 9.7) */
+  'window:openStudio': Contract<{ blockId?: string } | void, null>
 
   /** 오늘 창 상태: 투명도·접힘 (설계 9.7) */
   'today:getState': Contract<void, TodayWindowState>
@@ -139,6 +139,8 @@ export type IpcEvents = {
   'capture:failed': { captureId: string; errorCode: CaptureErrorCode; canRetry: boolean }
   /** 미완료 먹이 수가 바뀜 (설계 9.4) */
   'capture:unfinishedChanged': { count: number }
+  /** 스튜디오에 블록 카드 열기. window:openStudio에 blockId가 있을 때 스튜디오 창에만 보낸다 */
+  'studio:openBlock': { blockId: string }
 }
 export type IpcEvent = keyof IpcEvents
 

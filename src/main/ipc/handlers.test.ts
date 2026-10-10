@@ -20,6 +20,7 @@ describe('IPC 채널 핸들러', () => {
   let handlers: IpcHandlers
   let queue: ExtractionQueue
   let openedStudio: number
+  let openedBlockId: string | undefined
   let today: TodayWindowState
   let services: Services
 
@@ -35,7 +36,10 @@ describe('IPC 채널 핸들러', () => {
     openedStudio = 0
     today = { opacity: 90, collapsed: false }
     handlers = createIpcHandlers(services, queue, {
-      openStudio: () => openedStudio++,
+      openStudio: (blockId) => {
+        openedStudio++
+        openedBlockId = blockId
+      },
       todayState: () => today,
       setTodayOpacity: (opacity) => (today = { ...today, opacity }),
       setTodayCollapsed: (collapsed) => (today = { ...today, collapsed })
@@ -257,6 +261,17 @@ describe('IPC 채널 핸들러', () => {
   it('window:openStudio는 스튜디오를 연다', async () => {
     expect(await ok('window:openStudio', undefined)).toBeNull()
     expect(openedStudio).toBe(1)
+    expect(openedBlockId).toBeUndefined()
+  })
+
+  it('window:openStudio에 blockId를 주면 그 블록을 연다 (설계 9.7)', async () => {
+    expect(await ok('window:openStudio', { blockId: 'a' })).toBeNull()
+    expect(openedBlockId).toBe('a')
+
+    expect(await call('window:openStudio', { blockId: '' })).toMatchObject({
+      ok: false,
+      error: { code: 'INVALID_INPUT' }
+    })
   })
 
   it('today:*는 오늘 창 상태를 읽고 바꾼다 (설계 9.7)', async () => {

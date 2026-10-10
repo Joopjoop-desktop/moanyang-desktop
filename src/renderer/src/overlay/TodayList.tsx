@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
+import { unwrap } from '../api/client'
 import { messageForError } from '../api/errorMessages'
 import { useBlock } from '../api/queries'
 import { runBlockAction } from '../features/board/blockActionRules'
@@ -65,7 +66,10 @@ export function TodayList({ rows, error }: Props): React.JSX.Element {
   )
 }
 
-/** 펼친 줄: 할 일을 뺀 나머지 요소를 보여준다(보기 전용) */
+/**
+ * 펼친 줄: 할 일을 뺀 나머지 요소를 보여준다(보기 전용).
+ * 고치려면 "스튜디오에서 열기"로 스튜디오 오른쪽 패널에 그 블록 카드를 연다 (설계 9.7).
+ */
 function RowDetail({ blockId }: { blockId: string }): React.JSX.Element {
   const { data, error } = useBlock(blockId)
   if (error) return <p className={styles.detailMessage}>{messageForError(error)}</p>
@@ -73,16 +77,29 @@ function RowDetail({ blockId }: { blockId: string }): React.JSX.Element {
 
   const currentYear = new Date().getFullYear()
   const details = data.elements.filter((element) => element.type !== 'task')
-  if (details.length === 0) return <p className={styles.detailMessage}>더 적힌 내용이 없어요.</p>
+  const openInStudio = (): void => {
+    unwrap(window.api.window.openStudio({ blockId })).catch((e: unknown) =>
+      console.error('[today] 스튜디오 열기 실패', e)
+    )
+  }
 
   return (
-    <dl className={styles.detail}>
-      {details.map((element) => (
-        <div key={element.id} className={styles.detailRow}>
-          <dt>{ELEMENT_TYPE_LABELS[element.type]}</dt>
-          <dd>{describeElement(element, currentYear).primary}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className={styles.detail}>
+      {details.length === 0 ? (
+        <p className={styles.detailEmpty}>더 적힌 내용이 없어요.</p>
+      ) : (
+        <dl className={styles.detailList}>
+          {details.map((element) => (
+            <div key={element.id} className={styles.detailRow}>
+              <dt>{ELEMENT_TYPE_LABELS[element.type]}</dt>
+              <dd>{describeElement(element, currentYear).primary}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <button type="button" className={styles.openStudio} onClick={openInStudio}>
+        스튜디오에서 열기 →
+      </button>
+    </div>
   )
 }

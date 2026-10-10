@@ -205,13 +205,37 @@
   text-decoration: line-through;
 }
 
-/* 펼친 줄 */
+/* 펼친 줄: 요소들 + 스튜디오에서 열기 */
 .detail {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   padding: 2px 12px 8px 34px;
   font-size: 12px;
+}
+
+.detailList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detailEmpty {
+  color: var(--color-muted);
+}
+
+.openStudio {
+  align-self: flex-start;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.openStudio:hover {
+  text-decoration: underline;
 }
 
 .detailRow {

@@ -1,6 +1,6 @@
 import { app, dialog, ipcMain, screen, BrowserWindow } from 'electron'
 import { join } from 'path'
-import { DEV_IPC_CHANNELS, IPC_CHANNELS } from '@shared/ipc'
+import { DEV_IPC_CHANNELS, IPC_CHANNELS, type IpcEvents } from '@shared/ipc'
 import type { TodayWindowState } from '@shared/today'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import type { DatabaseConnection } from './db/connection'
@@ -108,7 +108,8 @@ function openWindows(): void {
   hideOnClose(overlay)
 
   tray = createTray(
-    { openStudio, toggleOverlay, quit: () => app.quit() },
+    // 트레이·메뉴 클릭은 이벤트 객체를 첫 인자로 넘기므로 blockId로 잘못 받지 않게 감싼다
+    { openStudio: () => openStudio(), toggleOverlay, quit: () => app.quit() },
     () => overlay?.isVisible() ?? false
   )
   // 메뉴 글자(숨기기·보이기)는 오늘 창이 실제로 보이거나 숨을 때마다 맞춘다.
@@ -143,12 +144,19 @@ const todayControls = {
   }
 }
 
-/** 스튜디오를 앞으로 가져온다 (오늘 창, 트레이, 설계 9.7) */
-function openStudio(): void {
+/**
+ * 스튜디오를 앞으로 가져온다 (오늘 창, 트레이, 설계 9.7).
+ * blockId가 있으면 스튜디오 창에만 studio:openBlock을 보내 오른쪽 패널에 그 블록 카드를 연다.
+ */
+function openStudio(blockId?: string): void {
   if (!studio || studio.isDestroyed()) return
   if (studio.isMinimized()) studio.restore()
   studio.show()
   studio.focus()
+  if (blockId) {
+    const payload: IpcEvents['studio:openBlock'] = { blockId }
+    studio.webContents.send('studio:openBlock', payload)
+  }
 }
 
 /** 오늘 창 숨기기·보이기 (트레이 메뉴). 보일 때 다른 앱의 초점을 뺏지 않는다. */
