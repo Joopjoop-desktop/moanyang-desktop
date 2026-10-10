@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { CAPTURE_TEXT_MAX_LENGTH } from '@shared/captures'
 import { checkFeed, NOT_TEXT_MESSAGE } from './feed'
 
-describe('캐릭터 먹이 확인 (설계 9.7)', () => {
+describe('서랍 먹이 확인 (설계 9.7)', () => {
   it('글은 고치지 않고 그대로 먹인다', () => {
     expect(checkFeed({ fileCount: 0, text: '  견적서 송부\n' })).toEqual({
       ok: true,

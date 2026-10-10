@@ -10,10 +10,10 @@ export type FeedInput = {
 
 export type FeedCheck = { ok: true; text: string } | { ok: false; message: string }
 
-export const NOT_TEXT_MESSAGE = '글자만 먹을 수 있어요'
+export const NOT_TEXT_MESSAGE = '글자만 넣을 수 있어요'
 
 /**
- * 캐릭터에 준 것을 먹일 수 있는지. (설계 9.7)
+ * 서랍에 넣은 것을 먹일 수 있는지. (설계 9.7)
  * - 파일·이미지가 섞여 있거나 글이 없으면 거절한다
  * - 너무 긴 글은 스튜디오 입력창과 같은 기준으로 거절한다
  * 원문은 고치지 않고 그대로 보낸다(설계 8.2).

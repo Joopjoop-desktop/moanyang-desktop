@@ -20,7 +20,7 @@ type Completed = Pick<IpcEvents['capture:completed'], 'toCalendar' | 'needsInput
 /**
  * 추출 결과를 짧은 문장들로. (설계 9.6, 9.7)
  * 캘린더로 바로 간 것과 채워야 하는 것을 따로 말한다. 블록이 없으면 "할 일이 안 보여요".
- * 스튜디오 알림과 캐릭터 말풍선이 같이 쓴다.
+ * 스튜디오 알림과 오늘 창 서랍이 같이 쓴다.
  */
 export function completedParts({ toCalendar, needsInput }: Completed): string[] {
   const parts: string[] = []

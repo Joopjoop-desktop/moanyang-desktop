@@ -1,6 +1,6 @@
 /*
  * 디자인 값은 여기 CSS 변수로만 정한다. 각 화면의 *.module.css는 이 변수를 쓴다. (설계 9.6)
- * 스튜디오(main.css)와 캐릭터 창(overlay.css)이 함께 쓴다.
+ * 스튜디오(main.css)와 오늘 창(overlay.css)이 함께 쓴다.
  */
 :root {
   --color-bg: #f6f7f9;

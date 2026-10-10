@@ -42,6 +42,33 @@
   white-space: nowrap;
 }
 
+/* 접혀 있을 때 글자 부분: 서랍 대신 먹이를 받는다. 끌기 영역에서는 놓기를 받을 수 없어 뺀다 */
+.dropTarget {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 8px;
+  margin-left: -8px;
+  border: 1px dashed transparent;
+  border-radius: var(--radius);
+  font-weight: 600;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+  cursor: default;
+}
+
+.dropOver {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+/* 접혀 있을 때 창을 옮기는 빈 곳 */
+.spacer {
+  flex: 1;
+  align-self: stretch;
+}
+
 .badge {
   min-width: 20px;
   padding: 0 6px;
