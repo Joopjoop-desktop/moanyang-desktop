@@ -2,22 +2,66 @@ import { useState } from 'react'
 import type { CaptureMethod } from '@shared/model'
 import { unwrap } from '../api/client'
 import { messageForError } from '../api/errorMessages'
+import { useCalendar } from '../api/queries'
+import { useCoreEvents } from '../api/useCoreEvents'
 import { Character } from './Character'
 import { checkFeed, readTransfer, type FeedInput } from './feed'
 import styles from './Overlay.module.css'
+import { TodayHeader } from './TodayHeader'
+import { TodayList } from './TodayList'
+import { todayRows } from './todayRows'
+import todayStyles from './TodayWindow.module.css'
 import { useBubble } from './useBubble'
 import { useCharacterMood } from './useCharacterMood'
+import { useLocalToday } from './useLocalToday'
+import { useTodayWindow } from './useTodayWindow'
 
 const PASTE_HINT = 'Ctrl+V로 먹이 주기'
 
 /**
- * 캐릭터 창 화면. (설계 9.7)
- * - 캐릭터 몸: 글을 끌어다 놓으면 먹는다(drag). 누르면 붙여넣기 모드가 되고 Ctrl+V로 먹는다(paste).
- *   두 번 누르면 스튜디오를 연다
- * - 아래 손잡이 막대: 잡고 끌면 창이 움직인다. 놓으면 코어가 위치를 저장한다
- * - 표정: 미완료 먹이가 있으면 먹는 중, 추출 결과에는 3초 동안 반응한다
+ * 오늘 창 화면. (설계 9.7)
+ * - 머리줄: 끌어서 이동, ⚙ 투명도, 접기·펼치기(접으면 코어가 창 높이를 머리줄 높이로 줄인다)
+ * - 오늘 할 일: calendar:list(오늘~오늘) → todayRows. 블록이 바뀌면 blocks:changed로 다시 불러온다
+ * - 아래: 먹이 받는 곳 (서랍으로 바뀌기 전까지 캐릭터)
  */
 export function Overlay(): React.JSX.Element {
+  useCoreEvents()
+  const today = useLocalToday()
+  const controls = useTodayWindow()
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const { data, error } = useCalendar(today, today)
+  const rows = data ? todayRows(data, today) : undefined
+  const remaining = rows?.filter((row) => !row.completed).length ?? 0
+
+  return (
+    <main
+      className={todayStyles.window}
+      style={{ '--today-opacity': controls.opacity / 100 } as React.CSSProperties}
+    >
+      <TodayHeader
+        today={today}
+        remaining={remaining}
+        controls={controls}
+        settingsOpen={settingsOpen}
+        onToggleSettings={() => setSettingsOpen(!settingsOpen)}
+      />
+      {!controls.collapsed && (
+        <>
+          <div className={todayStyles.body}>
+            <TodayList rows={rows} error={error} />
+          </div>
+          <CharacterFeed />
+        </>
+      )}
+    </main>
+  )
+}
+
+/**
+ * 먹이 받는 곳: 캐릭터 몸에 글을 끌어다 놓거나(drag), 누른 뒤 Ctrl+V(paste).
+ * 두 번 누르면 스튜디오를 연다. 표정은 미완료 먹이 수와 추출 결과로 정한다.
+ */
+function CharacterFeed(): React.JSX.Element {
   const bubble = useBubble()
   const mood = useCharacterMood(bubble.say)
   const [dragOver, setDragOver] = useState(false)
@@ -32,7 +76,7 @@ export function Overlay(): React.JSX.Element {
   }
 
   return (
-    <main className={styles.stage}>
+    <div className={styles.stage}>
       {pasteMode ? (
         <p className={styles.bubble}>{PASTE_HINT}</p>
       ) : (
@@ -88,8 +132,6 @@ export function Overlay(): React.JSX.Element {
           onBlur={() => setPasteMode(false)}
         />
       )}
-
-      <div className={styles.handle} title="끌어서 옮기기" />
-    </main>
+    </div>
   )
 }

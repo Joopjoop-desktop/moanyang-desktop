@@ -1,0 +1,210 @@
+/*
+ * 오늘 창 (설계 9.7). 창은 투명이고, 이 판 하나가 보이는 전부다.
+ * 투명도는 --today-opacity로 받고, 마우스를 올리면 진해진다.
+ */
+.window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  opacity: var(--today-opacity, 0.9);
+  transition: opacity 0.15s;
+}
+
+.window:hover {
+  opacity: 1;
+}
+
+/* 머리줄: 위아래 테두리(1px씩)와 합쳐 40px = 접었을 때 창 높이 (코어 TODAY_COLLAPSED_HEIGHT) */
+.header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  height: 38px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-sidebar);
+  -webkit-app-region: drag;
+  cursor: grab;
+}
+
+.heading {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-surface);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* 머리줄 버튼은 끌기 영역에서 빼야 누를 수 있다 */
+.iconButton {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.iconButton:hover,
+.active {
+  background: var(--color-hover);
+  color: var(--color-text);
+}
+
+.settings {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.settings input {
+  flex: 1;
+  min-width: 0;
+}
+
+.settingsValue {
+  width: 34px;
+  text-align: right;
+}
+
+/* 목록: 남는 높이를 채우고 넘치면 스크롤 */
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.message,
+.problem {
+  padding: 12px;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.problem {
+  padding-bottom: 0;
+  color: var(--color-warn);
+}
+
+.rows {
+  padding: 0;
+  list-style: none;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 12px;
+}
+
+.line:hover {
+  background: var(--color-hover);
+}
+
+.check {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 7px 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.time {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kind {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+/* 끝낸 일: 줄 긋고 흐리게 */
+.done .title,
+.done .time {
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+
+/* 펼친 줄 */
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 12px 8px 34px;
+  font-size: 12px;
+}
+
+.detailRow {
+  display: flex;
+  gap: 8px;
+}
+
+.detailRow dt {
+  flex-shrink: 0;
+  width: 40px;
+  color: var(--color-muted);
+}
+
+.detailRow dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.detailMessage {
+  padding: 2px 12px 8px 34px;
+  color: var(--color-muted);
+  font-size: 12px;
+}

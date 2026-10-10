@@ -1,15 +1,14 @@
+/* 오늘 창 아래 먹이 받는 곳 (서랍으로 바뀌기 전까지 캐릭터) */
 .stage {
   position: relative;
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
-  height: 100%;
+  height: 140px;
   padding-bottom: 6px;
-  /* 임시: 창 가장자리가 보이게. 오늘 창 화면을 만들 때 바뀐다 */
-  border: 2px dashed var(--color-accent);
-  background: rgba(255, 255, 255, 0.6);
+  border-top: 1px solid var(--color-border);
 }
 
 /* 캐릭터 몸: 먹이를 놓는 곳, 누르면 붙여넣기 모드 */
@@ -52,24 +51,4 @@
   height: 1px;
   opacity: 0;
   resize: none;
-}
-
-/*
- * 창 옮기기 손잡이. -webkit-app-region: drag 영역은 잡고 끌면 창이 움직인다.
- * 이 영역에서는 클릭·드롭을 받을 수 없어서, 캐릭터 몸과 나눠 둔다.
- */
-.handle {
-  width: 48px;
-  height: 10px;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.35);
-  opacity: 0.4;
-  -webkit-app-region: drag;
-  cursor: grab;
-  transition: opacity 0.15s;
-}
-
-.stage:hover .handle {
-  opacity: 1;
 }
