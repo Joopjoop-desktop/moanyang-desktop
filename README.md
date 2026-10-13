@@ -9,6 +9,7 @@
 | [`docs/features.md`](docs/features.md)       | 기획·디자인용 기능 명세: 화면, 기능, 사용 흐름, 화면 문구    |
 | [`docs/design.md`](docs/design.md)           | **기준 문서.** 데이터 모델, 도메인 규칙, IPC 명세, 개발 순서 |
 | [`docs/development.md`](docs/development.md) | 콘솔에서 코어 호출, DB 작업, 디버깅, 문제 해결               |
+| [`docs/mac-trial.md`](docs/mac-trial.md)     | 맥 체험 빌드: Actions로 빌드·전달, 설치 안내, 체크 목록      |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md)         | 브랜치·커밋·이슈·PR 흐름                                     |
 
 > 설계가 바뀌면 코드와 같은 PR에서 `docs/design.md`도 함께 고칩니다.
@@ -135,6 +136,7 @@ winget install --id Python.Python.3.12 -e
 | `npm run build`        | 타입 검사 후 빌드 (`out/`). `npm run start`로 빌드 결과 실행  |
 | `npm run build:unpack` | 설치 파일 없이 패키징 (`dist/win-unpacked`)                   |
 | `npm run build:win`    | Windows 설치 파일 생성 (`dist/`)                              |
+| `npm run build:mac`    | 맥 설치 파일(.dmg) 생성. 맥에서만 동작 (보통은 Actions에서)   |
 
 PR을 올리기 전에 `test`, `typecheck`, `lint` 세 개를 통과시킵니다.
 

@@ -171,6 +171,10 @@ const isPrimaryInstance = app.requestSingleInstanceLock()
 if (!isPrimaryInstance) app.quit()
 app.on('second-instance', () => openStudio())
 
+// 맥: Dock 아이콘을 누르면 스튜디오를 연다. X로 숨긴 창을 다시 여는 맥의 기본 동작 (설계 9.7)
+// 창이 만들어지기 전(앱 시작 중)에 와도 openStudio가 아무것도 하지 않는다
+app.on('activate', () => openStudio())
+
 app.whenReady().then(() => {
   if (!isPrimaryInstance) return
   electronApp.setAppUserModelId(APP_USER_MODEL_ID)
