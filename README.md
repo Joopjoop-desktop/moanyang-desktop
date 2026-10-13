@@ -9,6 +9,7 @@
 | [`docs/features.md`](docs/features.md)       | 기획·디자인용 기능 명세: 화면, 기능, 사용 흐름, 화면 문구    |
 | [`docs/design.md`](docs/design.md)           | **기준 문서.** 데이터 모델, 도메인 규칙, IPC 명세, 개발 순서 |
 | [`docs/development.md`](docs/development.md) | 콘솔에서 코어 호출, DB 작업, 디버깅, 문제 해결               |
+| [`docs/mac-trial.md`](docs/mac-trial.md)     | 맥 체험 빌드: Actions로 빌드·전달, 설치 안내, 체크 목록      |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md)         | 브랜치·커밋·이슈·PR 흐름                                     |
 
 > 설계가 바뀌면 코드와 같은 PR에서 `docs/design.md`도 함께 고칩니다.
