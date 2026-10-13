@@ -135,6 +135,7 @@ winget install --id Python.Python.3.12 -e
 | `npm run build`        | 타입 검사 후 빌드 (`out/`). `npm run start`로 빌드 결과 실행  |
 | `npm run build:unpack` | 설치 파일 없이 패키징 (`dist/win-unpacked`)                   |
 | `npm run build:win`    | Windows 설치 파일 생성 (`dist/`)                              |
+| `npm run build:mac`    | 맥 설치 파일(.dmg) 생성. 맥에서만 동작 (보통은 Actions에서)   |
 
 PR을 올리기 전에 `test`, `typecheck`, `lint` 세 개를 통과시킵니다.
 

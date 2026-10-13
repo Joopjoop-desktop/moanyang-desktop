@@ -29,4 +29,17 @@ nsis:
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+# 맥은 체험용 빌드만: dmg 하나, M칩(arm64)만 (설계 3.2)
+mac:
+  target:
+    - target: dmg
+      arch: arm64
+  category: public.app-category.productivity
+  # 서명·공증은 정식 배포 때. M칩은 서명 없는 앱을 실행하지 않으므로 임시 서명(ad-hoc)만 한다.
+  # 임시 서명에 hardenedRuntime을 켜면 Electron 프레임워크 서명과 맞지 않아 앱이 안 열린다.
+  identity: '-'
+  hardenedRuntime: false
+  notarize: false
+dmg:
+  artifactName: ${name}-${version}-${arch}.${ext}
 npmRebuild: false
