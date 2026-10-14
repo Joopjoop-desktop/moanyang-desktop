@@ -12,7 +12,7 @@ import styles from './CalendarSidePanel.module.css'
  * 오른쪽 패널에 보여줄 것 (설계 9.6)
  * - list: 채워 주세요 / 날짜 없는 일 목록 (기본)
  * - block: 캘린더에서 누른 블록 하나
- * - day: 하루에 걸린 블록 목록("+N개")
+ * - day: 하루에 걸린 블록 목록(날짜 칸, "+N개")
  */
 export type PanelContent =
   { kind: 'list' } | { kind: 'block'; blockId: string } | { kind: 'day'; date: string }
@@ -52,6 +52,8 @@ export function CalendarSidePanel({
           </header>
           {content.kind === 'block' ? (
             <BlockDetail blockId={content.blockId} onLeave={onBack} />
+          ) : dayEntries.length === 0 ? (
+            <p className={styles.message}>이 날은 일정이 없어요.</p>
           ) : (
             <ul className={styles.dayList}>
               {dayEntries.map((entry) => (
