@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CalendarEntryView } from '@shared/calendar'
 import { messageForError } from '../../api/errorMessages'
 import { useCalendar } from '../../api/queries'
+import { FillDnd } from '../fill/FillDnd'
 import {
   dayOfMonth,
   inMonth,
@@ -42,62 +43,64 @@ export function CalendarView(): React.JSX.Element {
   )
 
   return (
-    <div className={styles.layout}>
-      <section className={styles.calendar}>
-        <header className={styles.header}>
-          <h2 className={styles.title}>
-            {shown.year}년 {shown.month}월
-          </h2>
-          <div className={styles.nav}>
-            <button
-              type="button"
-              aria-label="지난달"
-              onClick={() => setShown(shiftMonth(shown, -1))}
-            >
-              ‹
-            </button>
-            <button type="button" onClick={() => setShown(monthOf(today))}>
-              오늘
-            </button>
-            <button
-              type="button"
-              aria-label="다음달"
-              onClick={() => setShown(shiftMonth(shown, 1))}
-            >
-              ›
-            </button>
+    <FillDnd>
+      <div className={styles.layout}>
+        <section className={styles.calendar}>
+          <header className={styles.header}>
+            <h2 className={styles.title}>
+              {shown.year}년 {shown.month}월
+            </h2>
+            <div className={styles.nav}>
+              <button
+                type="button"
+                aria-label="지난달"
+                onClick={() => setShown(shiftMonth(shown, -1))}
+              >
+                ‹
+              </button>
+              <button type="button" onClick={() => setShown(monthOf(today))}>
+                오늘
+              </button>
+              <button
+                type="button"
+                aria-label="다음달"
+                onClick={() => setShown(shiftMonth(shown, 1))}
+              >
+                ›
+              </button>
+            </div>
+            {error && <span className={styles.error}>{messageForError(error)}</span>}
+          </header>
+
+          <div className={styles.weekdays}>
+            {WEEKDAYS.map((name) => (
+              <span key={name}>{name}</span>
+            ))}
           </div>
-          {error && <span className={styles.error}>{messageForError(error)}</span>}
-        </header>
 
-        <div className={styles.weekdays}>
-          {WEEKDAYS.map((name) => (
-            <span key={name}>{name}</span>
-          ))}
-        </div>
+          <div className={styles.weeks}>
+            {grid.weeks.map((week) => (
+              <WeekRow
+                key={week[0]}
+                week={week}
+                entries={entries}
+                shown={shown}
+                today={today}
+                onOpenBlock={openBlock}
+                onOpenDay={openDay}
+              />
+            ))}
+          </div>
+        </section>
 
-        <div className={styles.weeks}>
-          {grid.weeks.map((week) => (
-            <WeekRow
-              key={week[0]}
-              week={week}
-              entries={entries}
-              shown={shown}
-              today={today}
-              onOpenBlock={openBlock}
-              onOpenDay={openDay}
-            />
-          ))}
-        </div>
-      </section>
-
-      <CalendarSidePanel
-        content={panel}
-        dayEntries={panel.kind === 'day' ? entriesOnDay(entries, panel.date) : []}
-        onOpenBlock={openBlock}
-        onBack={() => setPanel({ kind: 'list' })}
-      />
-    </div>
+        <CalendarSidePanel
+          content={panel}
+          dayEntries={panel.kind === 'day' ? entriesOnDay(entries, panel.date) : []}
+          onOpenBlock={openBlock}
+          onBack={() => setPanel({ kind: 'list' })}
+        />
+      </div>
+    </FillDnd>
   )
 }
 
