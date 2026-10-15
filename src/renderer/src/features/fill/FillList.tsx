@@ -24,7 +24,7 @@ const SPLIT_DROP: DropData = { kind: 'board' }
  * 빠진 것을 채우면 blocks:changed로 다시 불러와 항목이 저절로 빠진다.
  *
  * 드래그(설계 7.1, 9.6 표): 드래그 영역(FillDnd)은 달력과 같이 쓰도록 바깥에 있다.
- * - 한 줄 손잡이(⠿)를 다른 항목에 놓으면 합치기
+ * - 한 줄 손잡이(⠿)를 다른 항목에 놓으면 합치기, 달력 칸에 놓으면 날짜 넣기
  * - 펼친 카드의 요소를 다른 항목에 놓으면 이동, 목록 아래 빈 곳에 놓으면 분리, 카드 안에서는 순서 바꾸기
  */
 export function FillList(): React.JSX.Element {
@@ -179,6 +179,6 @@ function useIsDropTarget(blockId: string): boolean {
   const { active, over } = useDndContext()
   const dragging = active?.data.current as DragData | undefined
   const target = over?.data.current as DropData | undefined
-  if (!dragging || !target || target.kind === 'board') return false
+  if (!dragging || !target || target.kind === 'board' || target.kind === 'day') return false
   return target.blockId === blockId && dragging.blockId !== blockId
 }

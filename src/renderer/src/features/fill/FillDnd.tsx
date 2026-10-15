@@ -20,14 +20,19 @@ import { useToast } from '../toast/toastContext'
 import { blockTitle } from './fillRules'
 import styles from './FillList.module.css'
 
-type Props = { children: ReactNode }
+type Props = {
+  /** 한 줄 항목을 달력 칸에 놓았을 때 (날짜 넣기 창, 설계 9.6) */
+  onDropToDay: (blockId: string, date: string) => void
+  children: ReactNode
+}
 
 /**
- * 오른쪽 목록의 드래그 영역. 달력과 같이 쓸 수 있게 목록 바깥(CalendarView)에 둔다. (설계 7.1, 9.6 표)
- * 놓으면 dropRules가 동작을 정하고 dropActions가 코어에 요청한다.
+ * 오른쪽 목록과 달력이 같이 쓰는 드래그 영역. (설계 7.1, 9.6 표)
+ * 목록에서 끌고, 목록 안이나 달력 칸에 놓는다.
+ * 놓으면 dropRules가 동작을 정한다. 목록 안 동작은 dropActions가 코어에 요청하고, 달력 칸은 onDropToDay로 넘긴다.
  * 같은 종류가 겹치면 충돌 선택 창을 띄운다. 화면 갱신은 blocks:changed가 맡는다.
  */
-export function FillDnd({ children }: Props): React.JSX.Element {
+export function FillDnd({ onDropToDay, children }: Props): React.JSX.Element {
   const needsInput = useBlockList('needsInput')
   const undated = useBlockList('undated')
   const toast = useToast()
@@ -48,6 +53,7 @@ export function FillDnd({ children }: Props): React.JSX.Element {
       event.over?.data.current as DropData | undefined
     )
     if (!intent) return
+    if (intent.kind === 'setDate') return onDropToDay(intent.blockId, intent.date)
 
     performDrop(intent)
       .then((outcome) => {

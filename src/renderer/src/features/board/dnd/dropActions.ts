@@ -1,6 +1,6 @@
 import type { ConflictCheckInput, ConflictPreview, ConflictResolution } from '@shared/moves'
 import { unwrap } from '../../../api/client'
-import type { DropIntent, MoveIntent } from './dropRules'
+import type { MoveDropIntent, MoveIntent } from './dropRules'
 
 export type DropOutcome =
   /** 반영됨. autoDiscarded는 값이 같아 하나로 정리된 요소 수 */
@@ -13,7 +13,7 @@ export type DropOutcome =
  * 다른 블록으로 옮기거나 합칠 때는 먼저 미리보기를 받아, 고를 게 없으면 바로 반영한다.
  * 실패하면 ApiError.
  */
-export async function performDrop(intent: DropIntent): Promise<DropOutcome> {
+export async function performDrop(intent: MoveDropIntent): Promise<DropOutcome> {
   switch (intent.kind) {
     case 'reorder':
       await unwrap(

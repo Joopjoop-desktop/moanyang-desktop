@@ -116,7 +116,7 @@ function useIsDropTarget(blockId: string): boolean {
   const { active, over } = useDndContext()
   const dragging = active?.data.current as DragData | undefined
   const target = over?.data.current as DropData | undefined
-  if (!dragging || !target || target.kind === 'board') return false
+  if (!dragging || !target || target.kind === 'board' || target.kind === 'day') return false
   return target.blockId === blockId && dragging.blockId !== blockId
 }
 

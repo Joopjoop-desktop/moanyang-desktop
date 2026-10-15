@@ -95,6 +95,12 @@
   cursor: pointer;
 }
 
+/* 목록의 블록을 끌어 이 칸 위에 있을 때 */
+.dropTarget {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
 .otherMonth {
   background: var(--color-bg);
 }
