@@ -5,7 +5,14 @@ import { todayRows } from './todayRows'
 const TODAY = '2026-10-10'
 
 function mark(kind: 'start' | 'due', date: string, time: string | null = null): CalendarMarkView {
-  return { kind, elementId: `${kind}-${date}-${time}`, date, time, needsConfirm: false }
+  return {
+    kind,
+    elementId: `${kind}-${date}-${time}`,
+    date,
+    time,
+    endTime: null,
+    needsConfirm: false
+  }
 }
 
 function entry(

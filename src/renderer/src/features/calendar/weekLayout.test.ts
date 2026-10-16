@@ -14,7 +14,7 @@ const WEEK = [
 ]
 
 function mark(kind: 'start' | 'due', date: string, time: string | null = null): CalendarMarkView {
-  return { kind, elementId: `${kind}-${date}`, date, time, needsConfirm: false }
+  return { kind, elementId: `${kind}-${date}`, date, time, endTime: null, needsConfirm: false }
 }
 
 function entry(

@@ -36,7 +36,14 @@ describe('블록 → 달력 표시 (설계 7.5)', () => {
       expect(calendar).toEqual({
         span: null,
         marks: [
-          { kind: 'due', elementId: 'd', date: '2026-10-09', time: '11:00', needsConfirm: false }
+          {
+            kind: 'due',
+            elementId: 'd',
+            date: '2026-10-09',
+            time: '11:00',
+            endTime: null,
+            needsConfirm: false
+          }
         ]
       })
     })
@@ -59,6 +66,63 @@ describe('블록 → 달력 표시 (설계 7.5)', () => {
       const unsure = makeElement('d', 'due_date', { dateValue: '2026-10-09', needsConfirm: true })
 
       expect(planBlockCalendar([unsure])?.marks[0].needsConfirm).toBe(true)
+    })
+  })
+
+  describe('같은 날 시작·마감 (회의처럼 시간 칸이 있는 일)', () => {
+    it('막대 없이 같은 날 표시 하나: 시작 시각 ~ 마감 시각, 요소는 마감일', () => {
+      const calendar = planBlockCalendar([
+        start('s', '2026-10-09', '10:00'),
+        due('d', '2026-10-09', '11:00')
+      ])
+
+      expect(calendar).toEqual({
+        span: null,
+        marks: [
+          {
+            kind: 'sameDay',
+            elementId: 'd',
+            date: '2026-10-09',
+            time: '10:00',
+            endTime: '11:00',
+            needsConfirm: false
+          }
+        ]
+      })
+    })
+
+    it('시간이 한쪽만 있거나 없어도 합친다', () => {
+      const times = (calendar: BlockCalendar | null): unknown[] =>
+        calendar?.marks.map((m) => [m.kind, m.time, m.endTime]) ?? []
+      const startOnly = planBlockCalendar([
+        start('s', '2026-10-09', '10:00'),
+        due('d', '2026-10-09')
+      ])
+      const dueOnly = planBlockCalendar([start('s', '2026-10-09'), due('d', '2026-10-09', '15:00')])
+      const none = planBlockCalendar([start('s', '2026-10-09'), due('d', '2026-10-09')])
+
+      expect(times(startOnly)).toEqual([['sameDay', '10:00', null]])
+      expect(times(dueOnly)).toEqual([['sameDay', null, '15:00']])
+      expect(times(none)).toEqual([['sameDay', null, null]])
+    })
+
+    it('시작 시각이 마감 시각보다 늦으면 합치지 않고 따로 표시한다', () => {
+      const calendar = planBlockCalendar([
+        start('s', '2026-10-09', '15:00'),
+        due('d', '2026-10-09', '09:00')
+      ])
+
+      expect(calendar?.span).toBeNull()
+      expect(marksOf(calendar)).toEqual(['due:2026-10-09', 'start:2026-10-09'])
+    })
+
+    it('둘 중 하나라도 확인 필요면 점선', () => {
+      const unsure = makeElement('d', 'due_date', { dateValue: '2026-10-09', needsConfirm: true })
+
+      expect(planBlockCalendar([start('s', '2026-10-09'), unsure])?.marks[0]).toMatchObject({
+        kind: 'sameDay',
+        needsConfirm: true
+      })
     })
   })
 
@@ -110,6 +174,28 @@ describe('블록 → 달력 표시 (설계 7.5)', () => {
 
       expect(calendar?.span).toBeNull()
       expect(marksOf(calendar)).toEqual(['due:2026-10-09', 'start:2026-10-20'])
+    })
+
+    it('같은 날 짝이 맞으면 막대가 있어도 그날은 한 줄로 합친다', () => {
+      const calendar = planBlockCalendar([
+        start('s', '2026-10-09', '10:00'),
+        due('d1', '2026-10-09', '11:00'),
+        due('d2', '2026-10-14')
+      ])
+
+      expect(calendar?.span).toEqual({ start: '2026-10-09', end: '2026-10-14' })
+      expect(marksOf(calendar)).toEqual(['sameDay:2026-10-09', 'due:2026-10-14'])
+    })
+
+    it('그 날짜에 같은 종류가 여러 개면 짝을 정할 수 없어 합치지 않는다', () => {
+      const calendar = planBlockCalendar([
+        start('s', '2026-10-09'),
+        due('d1', '2026-10-09', '11:00'),
+        due('d2', '2026-10-09', '15:00')
+      ])
+
+      expect(calendar?.span).toBeNull()
+      expect(marksOf(calendar)).toEqual(['start:2026-10-09', 'due:2026-10-09', 'due:2026-10-09'])
     })
 
     it('같은 날 표시는 시간 없는 것 먼저, 그다음 시간 순', () => {

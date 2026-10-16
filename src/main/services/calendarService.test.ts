@@ -57,6 +57,7 @@ describe('CalendarService (설계 7.5)', () => {
               elementId: 'due-due_date-0',
               date: '2026-10-09',
               time: null,
+              endTime: null,
               needsConfirm: false
             }
           ]
