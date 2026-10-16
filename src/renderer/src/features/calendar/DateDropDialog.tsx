@@ -120,7 +120,23 @@ function DateForm({
                 disabled={many}
                 aria-label={ELEMENT_TYPE_LABELS[type]}
                 onChange={(e) =>
-                  setChoices({ ...choices, [type]: { checked: true, date: e.target.value } })
+                  setChoices({
+                    ...choices,
+                    [type]: { ...choices[type], checked: true, date: e.target.value }
+                  })
+                }
+              />
+              <input
+                type="time"
+                className={styles.input}
+                value={choices[type].time}
+                disabled={many}
+                aria-label={`${ELEMENT_TYPE_LABELS[type]} 시간`}
+                onChange={(e) =>
+                  setChoices({
+                    ...choices,
+                    [type]: { ...choices[type], checked: true, time: e.target.value }
+                  })
                 }
               />
               <span className={styles.current}>
@@ -133,6 +149,9 @@ function DateForm({
 
       {!plan.ok && plan.reason === 'startAfterDue' && (
         <p className={styles.notice}>시작일이 마감일보다 늦어요.</p>
+      )}
+      {!plan.ok && plan.reason === 'startTimeAfterDue' && (
+        <p className={styles.notice}>시작 시각이 마감 시각보다 늦어요.</p>
       )}
 
       <div className={styles.buttons}>
@@ -172,7 +191,7 @@ async function applyRequests(requests: DateRequest[]): Promise<void> {
           blockId: request.blockId,
           type: request.type,
           dateValue: request.dateValue,
-          timeValue: null
+          timeValue: request.timeValue
         })
       )
     } else {
