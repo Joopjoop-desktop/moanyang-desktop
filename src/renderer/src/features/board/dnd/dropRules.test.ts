@@ -40,6 +40,10 @@ describe('놓은 위치 → 동작 (설계 7.1, 9.6)', () => {
       expect(resolveDrop(el('a', 'b1', 0), { kind: 'blockArea', blockId: 'b1' })).toBeNull()
     })
 
+    it('달력 칸: 아무것도 하지 않는다', () => {
+      expect(resolveDrop(el('a', 'b1', 0), { kind: 'day', date: '2026-10-14' })).toBeNull()
+    })
+
     it('보드 빈 곳: 새 블록으로 분리. 요소가 하나뿐인 블록이면 아무것도 하지 않는다', () => {
       expect(resolveDrop(el('a', 'b1', 0), { kind: 'board' })).toEqual({
         kind: 'split',
@@ -56,6 +60,12 @@ describe('놓은 위치 → 동작 (설계 7.1, 9.6)', () => {
 
       expect(resolveDrop(block, { kind: 'blockArea', blockId: 'b2' })).toEqual(merge)
       expect(resolveDrop(block, el('x', 'b2', 0))).toEqual(merge)
+    })
+
+    it('달력 칸: 그 날짜로 날짜 넣기', () => {
+      expect(
+        resolveDrop({ kind: 'block', blockId: 'b1' }, { kind: 'day', date: '2026-10-14' })
+      ).toEqual({ kind: 'setDate', blockId: 'b1', date: '2026-10-14' })
     })
 
     it('자기 자신이나 보드 빈 곳: 아무것도 하지 않는다', () => {

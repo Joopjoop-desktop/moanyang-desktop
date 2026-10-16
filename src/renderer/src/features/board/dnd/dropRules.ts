@@ -14,8 +14,12 @@ export type ElementDnd = {
   blockSize: number
 }
 export type DragData = ElementDnd | { kind: 'block'; blockId: string }
-/** blockArea: 블록 카드나 목록의 한 줄 항목, board: 목록 아래 빈 곳(분리) */
-export type DropData = ElementDnd | { kind: 'blockArea'; blockId: string } | { kind: 'board' }
+/** blockArea: 블록 카드나 목록의 한 줄 항목, board: 목록 아래 빈 곳(분리), day: 달력 날짜 칸 */
+export type DropData =
+  | ElementDnd
+  | { kind: 'blockArea'; blockId: string }
+  | { kind: 'board' }
+  | { kind: 'day'; date: string }
 
 export type DropIntent =
   /** 같은 블록 안 순서 바꾸기. index는 옮긴 뒤 위치 */
@@ -26,6 +30,11 @@ export type DropIntent =
   | { kind: 'split'; elementId: string }
   /** 블록 합치기 */
   | { kind: 'merge'; sourceBlockId: string; targetBlockId: string }
+  /** 블록을 달력 칸에 놓기: 날짜 넣기 창을 띄운다 (설계 9.6) */
+  | { kind: 'setDate'; blockId: string; date: string }
+
+/** 코어에 바로 요청하는 동작(dropActions). 날짜 넣기는 창에서 고른 뒤 요청한다 */
+export type MoveDropIntent = Exclude<DropIntent, { kind: 'setDate' }>
 
 /** 다른 블록으로 옮기는 동작. 같은 종류 요소가 겹치면 충돌 선택이 필요하다 */
 export type MoveIntent = Extract<DropIntent, { kind: 'moveElement' | 'merge' }>
@@ -57,10 +66,14 @@ function dropElement(active: ElementDnd, over: DropData): DropIntent | null {
     case 'board':
       // 요소가 하나뿐인 블록은 분리해도 같은 모양이라 아무것도 하지 않는다
       return active.blockSize > 1 ? { kind: 'split', elementId } : null
+    case 'day':
+      // 요소 하나를 달력에 놓는 것은 하지 않는다(블록 단위로만 날짜를 넣는다)
+      return null
   }
 }
 
 function dropBlock(sourceBlockId: string, over: DropData): DropIntent | null {
+  if (over.kind === 'day') return { kind: 'setDate', blockId: sourceBlockId, date: over.date }
   if (over.kind === 'board' || over.blockId === sourceBlockId) return null
   return { kind: 'merge', sourceBlockId, targetBlockId: over.blockId }
 }

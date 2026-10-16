@@ -1,0 +1,119 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(440px, calc(100% - 32px));
+  max-height: calc(100% - 64px);
+  overflow-y: auto;
+  padding: 20px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+.dialog:focus {
+  outline: none;
+}
+
+.title {
+  font-size: 16px;
+}
+
+.description {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.blockTitle {
+  word-break: break-word;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* 체크 + 종류 | 날짜 고르기 | 지금 값 */
+.row {
+  display: grid;
+  grid-template-columns: 72px auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.input {
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+.current {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notice {
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--color-warn-soft);
+  color: var(--color-warn);
+  font-size: 13px;
+}
+
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.primary,
+.secondary {
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  font: inherit;
+  cursor: pointer;
+}
+
+.primary {
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-surface);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.secondary {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}

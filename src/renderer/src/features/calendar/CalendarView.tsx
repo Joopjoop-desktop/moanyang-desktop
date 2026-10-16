@@ -1,7 +1,10 @@
+import { useDroppable } from '@dnd-kit/core'
 import { useEffect, useState } from 'react'
 import type { CalendarEntryView } from '@shared/calendar'
 import { messageForError } from '../../api/errorMessages'
 import { useCalendar } from '../../api/queries'
+import type { DragData, DropData } from '../board/dnd/dropRules'
+import { FillDnd } from '../fill/FillDnd'
 import {
   dayOfMonth,
   inMonth,
@@ -12,6 +15,7 @@ import {
 } from './calendarDates'
 import { CalendarSidePanel, type PanelContent } from './CalendarSidePanel'
 import styles from './CalendarView.module.css'
+import { DateDropDialog, type DateDrop } from './DateDropDialog'
 import { entriesOnDay, visibleWeek } from './visibleWeek'
 import { layoutWeek, type DayMark } from './weekLayout'
 
@@ -22,12 +26,14 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
  * 시작일은 점, 마감일은 마감 표시, 시작~마감은 기간 막대. 완료는 흐리게, 확인 필요는 점선.
  * 오른쪽 패널은 항상 열려 있고 기본은 채워 주세요 목록이다.
  * 막대·표시를 누르면 블록 카드를, 날짜 칸이나 "+N개"를 누르면 그날의 블록 목록을 패널에 띄운다.
+ * 목록의 한 줄 항목을 날짜 칸에 끌어다 놓으면 날짜 넣기 창을 띄운다(목록과 달력이 드래그 영역을 같이 쓴다).
  * 데이터는 화면에 보이는 6주 전체로 조회한다. 블록이 바뀌면 blocks:changed로 다시 불러온다.
  */
 export function CalendarView(): React.JSX.Element {
   const today = localToday()
   const [shown, setShown] = useState<YearMonth>(() => monthOf(today))
   const [panel, setPanel] = useState<PanelContent>({ kind: 'list' })
+  const [dateDrop, setDateDrop] = useState<DateDrop | null>(null)
   const grid = monthGrid(shown)
   const { data, error } = useCalendar(grid.from, grid.to)
   const entries = data ?? []
@@ -42,62 +48,65 @@ export function CalendarView(): React.JSX.Element {
   )
 
   return (
-    <div className={styles.layout}>
-      <section className={styles.calendar}>
-        <header className={styles.header}>
-          <h2 className={styles.title}>
-            {shown.year}년 {shown.month}월
-          </h2>
-          <div className={styles.nav}>
-            <button
-              type="button"
-              aria-label="지난달"
-              onClick={() => setShown(shiftMonth(shown, -1))}
-            >
-              ‹
-            </button>
-            <button type="button" onClick={() => setShown(monthOf(today))}>
-              오늘
-            </button>
-            <button
-              type="button"
-              aria-label="다음달"
-              onClick={() => setShown(shiftMonth(shown, 1))}
-            >
-              ›
-            </button>
+    <FillDnd onDropToDay={(blockId, date) => setDateDrop({ blockId, date })}>
+      <div className={styles.layout}>
+        <section className={styles.calendar}>
+          <header className={styles.header}>
+            <h2 className={styles.title}>
+              {shown.year}년 {shown.month}월
+            </h2>
+            <div className={styles.nav}>
+              <button
+                type="button"
+                aria-label="지난달"
+                onClick={() => setShown(shiftMonth(shown, -1))}
+              >
+                ‹
+              </button>
+              <button type="button" onClick={() => setShown(monthOf(today))}>
+                오늘
+              </button>
+              <button
+                type="button"
+                aria-label="다음달"
+                onClick={() => setShown(shiftMonth(shown, 1))}
+              >
+                ›
+              </button>
+            </div>
+            {error && <span className={styles.error}>{messageForError(error)}</span>}
+          </header>
+
+          <div className={styles.weekdays}>
+            {WEEKDAYS.map((name) => (
+              <span key={name}>{name}</span>
+            ))}
           </div>
-          {error && <span className={styles.error}>{messageForError(error)}</span>}
-        </header>
 
-        <div className={styles.weekdays}>
-          {WEEKDAYS.map((name) => (
-            <span key={name}>{name}</span>
-          ))}
-        </div>
+          <div className={styles.weeks}>
+            {grid.weeks.map((week) => (
+              <WeekRow
+                key={week[0]}
+                week={week}
+                entries={entries}
+                shown={shown}
+                today={today}
+                onOpenBlock={openBlock}
+                onOpenDay={openDay}
+              />
+            ))}
+          </div>
+        </section>
 
-        <div className={styles.weeks}>
-          {grid.weeks.map((week) => (
-            <WeekRow
-              key={week[0]}
-              week={week}
-              entries={entries}
-              shown={shown}
-              today={today}
-              onOpenBlock={openBlock}
-              onOpenDay={openDay}
-            />
-          ))}
-        </div>
-      </section>
-
-      <CalendarSidePanel
-        content={panel}
-        dayEntries={panel.kind === 'day' ? entriesOnDay(entries, panel.date) : []}
-        onOpenBlock={openBlock}
-        onBack={() => setPanel({ kind: 'list' })}
-      />
-    </div>
+        <CalendarSidePanel
+          content={panel}
+          dayEntries={panel.kind === 'day' ? entriesOnDay(entries, panel.date) : []}
+          onOpenBlock={openBlock}
+          onBack={() => setPanel({ kind: 'list' })}
+        />
+      </div>
+      {dateDrop && <DateDropDialog {...dateDrop} onClose={() => setDateDrop(null)} />}
+    </FillDnd>
   )
 }
 
@@ -136,17 +145,16 @@ function WeekRow({
       style={{ gridTemplateRows: `auto repeat(${layout.laneCount}, auto) 1fr` }}
     >
       {week.map((date, col) => (
-        <button
-          type="button"
+        <DayCell
           key={date}
+          date={date}
           className={[
             styles.day,
             inMonth(date, shown) ? '' : styles.otherMonth,
             date === today ? styles.today : ''
           ].join(' ')}
           style={{ gridColumn: col + 1, gridRow: `1 / span ${marksRow}` }}
-          aria-label={`${date} 일정 보기`}
-          onClick={() => onOpenDay(date)}
+          onOpen={() => onOpenDay(date)}
         />
       ))}
 
@@ -204,6 +212,32 @@ function WeekRow({
         </ul>
       ))}
     </div>
+  )
+}
+
+type DayCellProps = {
+  date: string
+  className: string
+  style: React.CSSProperties
+  onOpen: () => void
+}
+
+/** 날짜 칸. 누르면 그날의 블록 목록, 목록의 한 줄 항목을 놓으면 날짜 넣기 (설계 9.6) */
+function DayCell({ date, className, style, onOpen }: DayCellProps): React.JSX.Element {
+  const dropData: DropData = { kind: 'day', date }
+  const { setNodeRef, isOver, active } = useDroppable({ id: `day:${date}`, data: dropData })
+  // 블록을 끌 때만 강조한다. 요소는 달력에 놓아도 아무것도 하지 않는다
+  const targeted = isOver && (active?.data.current as DragData | undefined)?.kind === 'block'
+
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      className={targeted ? `${className} ${styles.dropTarget}` : className}
+      style={style}
+      aria-label={`${date} 일정 보기`}
+      onClick={onOpen}
+    />
   )
 }
 
