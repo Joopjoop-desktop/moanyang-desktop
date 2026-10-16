@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CalendarEntryView, CalendarMarkView } from '@shared/calendar'
-import { layoutWeek } from './weekLayout'
+import { layoutWeek, weekGridRows } from './weekLayout'
 
 // 2026-10-04(일) ~ 10-10(토)
 const WEEK = [
@@ -90,5 +90,10 @@ describe('한 주 배치 (설계 7.5 화면)', () => {
     const day = layoutWeek(WEEK, [a, b, c]).marks[5]
 
     expect(day.map(({ entry: e }) => e.blockId)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('줄 높이: 막대가 없는 주도 숫자 줄 + 표시 줄로 올바른 값이다', () => {
+    expect(weekGridRows(0)).toBe('auto 1fr')
+    expect(weekGridRows(2)).toBe('auto auto auto 1fr')
   })
 })

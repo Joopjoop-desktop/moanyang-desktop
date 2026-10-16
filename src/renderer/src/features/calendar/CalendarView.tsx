@@ -17,7 +17,7 @@ import { CalendarSidePanel, type PanelContent } from './CalendarSidePanel'
 import styles from './CalendarView.module.css'
 import { DateDropDialog, type DateDrop } from './DateDropDialog'
 import { entriesOnDay, visibleWeek } from './visibleWeek'
-import { layoutWeek, type DayMark } from './weekLayout'
+import { layoutWeek, weekGridRows, type DayMark } from './weekLayout'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -139,11 +139,7 @@ function WeekRow({
   const marksRow = layout.laneCount + 2
 
   return (
-    <div
-      className={styles.week}
-      // 날짜 숫자 줄, 막대 줄들, 표시 줄(남는 높이를 채운다)
-      style={{ gridTemplateRows: `auto repeat(${layout.laneCount}, auto) 1fr` }}
-    >
+    <div className={styles.week} style={{ gridTemplateRows: weekGridRows(layout.laneCount) }}>
       {week.map((date, col) => (
         <DayCell
           key={date}

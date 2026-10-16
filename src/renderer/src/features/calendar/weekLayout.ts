@@ -24,6 +24,14 @@ export type WeekLayout = {
 }
 
 /**
+ * 한 주 격자의 줄 높이: 날짜 숫자 줄, 막대 줄들, 표시 줄(남는 높이를 채운다).
+ * CSS repeat()는 0을 받지 않아 막대가 없는 주에서 값 전체가 무시되므로 줄을 직접 나열한다.
+ */
+export function weekGridRows(laneCount: number): string {
+  return `auto ${'auto '.repeat(laneCount)}1fr`
+}
+
+/**
  * 한 주(일~토 7개 날짜)의 막대와 표시 배치. (설계 7.5)
  * - 막대는 이 주에 걸치는 부분만 잘라 그리고, 겹치면 아래 줄로 내린다(먼저 시작·더 긴 막대가 위)
  * - 막대가 있는 블록도 개별 시작 점·마감 표시는 그날 칸에 그대로 그린다
