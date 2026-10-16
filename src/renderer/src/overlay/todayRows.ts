@@ -25,8 +25,9 @@ export type TodayRow = {
 
 /**
  * 오늘 칸에 보이는 일만 줄로 만든다. 지난 마감은 넣지 않는다.
- * - 오늘 마감이 있으면 마감, 없고 오늘 시작이면 시작, 둘 다 없으면 기간
- * - 시간은 오늘 날짜의 표시(시작 점·마감 표시)에 있는 시간만 쓴다
+ * - 오늘 마감이 있으면 마감, 없고 오늘 시작이면 시작, 둘 다 없으면 기간.
+ *   같은 날 시작·마감 한 줄(sameDay)도 마감
+ * - 시간은 오늘 날짜의 표시(시작 점·마감 표시·같은 날 표시)에 있는 시간만 쓴다
  * - 순서: 시간 있는 일 시간 순 → 시간 없는 일 → 끝낸 일(같은 규칙으로 맨 아래).
  *   같으면 받은 순서(달력 순서) 그대로
  */
@@ -44,12 +45,13 @@ function toRow(entry: CalendarEntryView, today: string): TodayRow | null {
   const crossesToday = entry.span !== null && entry.span.start <= today && today <= entry.span.end
   if (marksToday.length === 0 && !crossesToday) return null
 
-  const times = marksToday.flatMap((mark) => (mark.time ? [mark.time] : [])).sort()
-  const kind: TodayKind = marksToday.some((mark) => mark.kind === 'due')
-    ? 'due'
-    : marksToday.length > 0
-      ? 'start'
-      : 'span'
+  // 같은 날 표시는 시작 시각(time)과 마감 시각(endTime)을 둘 다 갖는다
+  const times = marksToday
+    .flatMap((mark) => [mark.time, mark.endTime])
+    .filter((time): time is string => time !== null)
+    .sort()
+  const hasDue = marksToday.some((mark) => mark.kind === 'due' || mark.kind === 'sameDay')
+  const kind: TodayKind = hasDue ? 'due' : marksToday.length > 0 ? 'start' : 'span'
 
   return {
     blockId: entry.blockId,
