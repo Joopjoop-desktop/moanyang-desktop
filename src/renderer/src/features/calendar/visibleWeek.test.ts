@@ -20,6 +20,7 @@ function due(blockId: string, date: string): CalendarEntryView {
     elementId: `${blockId}-due`,
     date,
     time: null,
+    endTime: null,
     needsConfirm: false
   }
   return { blockId, title: blockId, completed: false, span: null, marks: [mark] }

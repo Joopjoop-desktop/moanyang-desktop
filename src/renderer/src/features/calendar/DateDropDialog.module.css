@@ -47,12 +47,16 @@
   border-radius: var(--radius);
 }
 
-/* 체크 + 종류 | 날짜 고르기 | 지금 값 */
+/* 체크 + 종류 | 날짜 고르기 | 시간 고르기, 아랫줄에 지금 값 */
 .row {
   display: grid;
   grid-template-columns: 72px auto 1fr;
   align-items: center;
-  gap: 8px;
+  gap: 4px 8px;
+}
+
+.row .input[type='time'] {
+  justify-self: start;
 }
 
 .check {
@@ -70,6 +74,7 @@
 }
 
 .current {
+  grid-column: 2 / -1;
   min-width: 0;
   overflow: hidden;
   color: var(--color-muted);

@@ -17,7 +17,7 @@ import { CalendarSidePanel, type PanelContent } from './CalendarSidePanel'
 import styles from './CalendarView.module.css'
 import { DateDropDialog, type DateDrop } from './DateDropDialog'
 import { entriesOnDay, visibleWeek } from './visibleWeek'
-import { layoutWeek, type DayMark } from './weekLayout'
+import { layoutWeek, markTimeText, weekGridRows, type DayMark } from './weekLayout'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -139,11 +139,7 @@ function WeekRow({
   const marksRow = layout.laneCount + 2
 
   return (
-    <div
-      className={styles.week}
-      // 날짜 숫자 줄, 막대 줄들, 표시 줄(남는 높이를 채운다)
-      style={{ gridTemplateRows: `auto repeat(${layout.laneCount}, auto) 1fr` }}
-    >
+    <div className={styles.week} style={{ gridTemplateRows: weekGridRows(layout.laneCount) }}>
       {week.map((date, col) => (
         <DayCell
           key={date}
@@ -241,9 +237,15 @@ function DayCell({ date, className, style, onOpen }: DayCellProps): React.JSX.El
   )
 }
 
-/** 시작일은 점, 마감일은 마감 표시. 시간이 있으면 앞에 붙인다. 누르면 블록 카드 */
+const MARK_KIND_LABELS = { start: '시작', due: '마감', sameDay: '시작·마감' } as const
+
+/**
+ * 시작일은 점, 마감일과 같은 날 시작·마감은 마감 표시. 시간이 있으면 앞에 붙인다
+ * (같은 날은 10:00~11:00). 누르면 블록 카드
+ */
 function MarkItem({ item, onOpen }: { item: DayMark; onOpen: () => void }): React.JSX.Element {
   const { entry, mark } = item
+  const time = markTimeText(mark)
   return (
     <li>
       <button
@@ -254,10 +256,10 @@ function MarkItem({ item, onOpen }: { item: DayMark; onOpen: () => void }): Reac
           entry.completed ? styles.completed : '',
           mark.needsConfirm ? styles.unconfirmed : ''
         ].join(' ')}
-        title={`${mark.kind === 'start' ? '시작' : '마감'}: ${entry.title}`}
+        title={`${MARK_KIND_LABELS[mark.kind]}: ${time ? `${time} ` : ''}${entry.title}`}
         onClick={onOpen}
       >
-        {mark.time && <span className={styles.time}>{mark.time}</span>}
+        {time && <span className={styles.time}>{time}</span>}
         <span className={styles.markTitle}>{entry.title}</span>
       </button>
     </li>

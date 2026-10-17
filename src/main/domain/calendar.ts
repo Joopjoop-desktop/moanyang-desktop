@@ -5,12 +5,19 @@ import type { DomainElement } from './types'
  * 날짜는 YYYY-MM-DD 문자열이라 문자열 비교가 곧 날짜 비교다(UTC로 바꾸지 않음, 설계 6.4).
  */
 
-/** 날짜 하나에 찍는 표시: 시작일은 점, 마감일은 마감 표시 */
+/**
+ * 날짜 하나에 찍는 표시: 시작일은 점, 마감일은 마감 표시,
+ * 같은 날의 시작일·마감일 한 쌍은 같은 날 표시(sameDay) 하나로 합친다.
+ */
 export type CalendarMark = {
-  kind: 'start' | 'due'
+  kind: 'start' | 'due' | 'sameDay'
+  /** sameDay는 마감일 요소 */
   elementId: string
   date: string
+  /** sameDay는 시작 시각 */
   time: string | null
+  /** sameDay의 마감 시각. 다른 종류는 null */
+  endTime: string | null
   needsConfirm: boolean
 }
 
@@ -18,7 +25,7 @@ export type CalendarMark = {
 export type CalendarSpan = { start: string; end: string }
 
 export type BlockCalendar = {
-  /** 시작일과 마감일이 다 있고 뒤집히지 않았을 때만 */
+  /** 시작일과 마감일이 다 있고 시작일이 마감일보다 이를 때만 */
   span: CalendarSpan | null
   /** 날짜가 있는 시작일·마감일 전부 (날짜·시간 순). 막대가 있어도 그대로 둔다 */
   marks: CalendarMark[]
@@ -28,21 +35,51 @@ export type BlockCalendar = {
  * 블록의 요소로 달력 표시를 정한다. 달력에 나올 날짜가 없으면 null(보드에만).
  * - 마감일·시작일은 날짜마다 표시한다. 여러 개면 모두 (우선순위 없음)
  * - 시작일과 마감일이 다 있으면 가장 이른 시작일 ~ 가장 늦은 마감일을 막대로 그린다
- * - 가장 이른 시작일이 가장 늦은 마감일보다 늦으면(뒤집힘) 막대 없이 표시만 남긴다
+ * - 가장 이른 시작일이 가장 늦은 마감일과 같거나 늦으면(같은 날·뒤집힘) 막대 없이 표시만 남긴다
+ * - 같은 날 시작일 1개·마감일 1개는 한 표시로 합친다(mergeSameDay)
  * - 날짜 없이 원래 표현만 있는 요소(예: "다음주쯤")는 빠진다
  * 삭제된 요소는 넘기지 않는다(서비스 몫).
  */
 export function planBlockCalendar(elements: readonly DomainElement[]): BlockCalendar | null {
-  const marks = elements.flatMap(toMark).sort(byDateThenTime)
-  if (marks.length === 0) return null
+  const raw = elements.flatMap(toMark)
+  if (raw.length === 0) return null
 
-  const starts = marks.filter((mark) => mark.kind === 'start').map((mark) => mark.date)
-  const dues = marks.filter((mark) => mark.kind === 'due').map((mark) => mark.date)
+  const marks = mergeSameDay(raw).sort(byDateThenTime)
+  const starts = raw.filter((mark) => mark.kind === 'start').map((mark) => mark.date)
+  const dues = raw.filter((mark) => mark.kind === 'due').map((mark) => mark.date)
   if (starts.length === 0 || dues.length === 0) return { span: null, marks }
 
   const start = starts.reduce((a, b) => (a < b ? a : b))
   const end = dues.reduce((a, b) => (a > b ? a : b))
-  return { span: start <= end ? { start, end } : null, marks }
+  return { span: start < end ? { start, end } : null, marks }
+}
+
+/**
+ * 같은 날 시작·마감 합치기 (설계 7.5).
+ * 그 날짜에 시작일·마감일이 하나씩일 때만 합친다(여러 개면 짝을 정할 수 없다).
+ * 시작 시각이 마감 시각보다 늦으면(같은 날 뒤집힘) 합치지 않는다.
+ */
+function mergeSameDay(marks: readonly CalendarMark[]): CalendarMark[] {
+  const dates = new Set(marks.map((mark) => mark.date))
+  return [...dates].flatMap((date): CalendarMark[] => {
+    const onDate = marks.filter((mark) => mark.date === date)
+    const starts = onDate.filter((mark) => mark.kind === 'start')
+    const dues = onDate.filter((mark) => mark.kind === 'due')
+    if (starts.length !== 1 || dues.length !== 1) return onDate
+
+    const [start, due] = [starts[0], dues[0]]
+    if (start.time !== null && due.time !== null && start.time > due.time) return onDate
+    return [
+      {
+        kind: 'sameDay',
+        elementId: due.elementId,
+        date,
+        time: start.time,
+        endTime: due.time,
+        needsConfirm: start.needsConfirm || due.needsConfirm
+      }
+    ]
+  })
 }
 
 /**
@@ -63,6 +100,7 @@ function toMark(element: DomainElement): CalendarMark[] {
       elementId: element.id,
       date: element.dateValue,
       time: element.timeValue,
+      endTime: null,
       needsConfirm: element.needsConfirm
     }
   ]

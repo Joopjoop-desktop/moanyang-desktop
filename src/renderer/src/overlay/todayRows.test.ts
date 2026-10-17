@@ -5,7 +5,19 @@ import { todayRows } from './todayRows'
 const TODAY = '2026-10-10'
 
 function mark(kind: 'start' | 'due', date: string, time: string | null = null): CalendarMarkView {
-  return { kind, elementId: `${kind}-${date}-${time}`, date, time, needsConfirm: false }
+  return {
+    kind,
+    elementId: `${kind}-${date}-${time}`,
+    date,
+    time,
+    endTime: null,
+    needsConfirm: false
+  }
+}
+
+/** 같은 날 시작·마감 한 줄 (설계 7.5) */
+function sameDay(date: string, time: string | null, endTime: string | null): CalendarMarkView {
+  return { kind: 'sameDay', elementId: `same-${date}`, date, time, endTime, needsConfirm: false }
 }
 
 function entry(
@@ -52,12 +64,11 @@ describe('오늘 할 일 줄 (설계 9.7)', () => {
     expect(summary([span])).toEqual(['report:span:-'])
   })
 
-  it('오늘 시작이면서 마감이면 한 줄, 마감으로 표시하고 오늘 시간 중 가장 이른 것', () => {
-    const both = entry('both', [mark('start', TODAY, '09:00'), mark('due', TODAY, '18:00')], {
-      span: { start: TODAY, end: TODAY }
-    })
+  it('오늘 시작이면서 마감(같은 날 한 줄)이면 마감으로 표시하고 오늘 시간 중 가장 이른 것', () => {
+    const both = entry('both', [sameDay(TODAY, '09:00', '18:00')])
+    const dueTimeOnly = entry('dueTimeOnly', [sameDay(TODAY, null, '15:00')])
 
-    expect(summary([both])).toEqual(['both:due:09:00'])
+    expect(summary([both, dueTimeOnly])).toEqual(['both:due:09:00', 'dueTimeOnly:due:15:00'])
   })
 
   it('기간의 마지막 날이 오늘이면 마감, 오늘 마감의 시간만 쓴다', () => {

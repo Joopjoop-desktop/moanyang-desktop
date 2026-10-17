@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CalendarEntryView, CalendarMarkView } from '@shared/calendar'
-import { layoutWeek } from './weekLayout'
+import { layoutWeek, markTimeText, weekGridRows } from './weekLayout'
 
 // 2026-10-04(일) ~ 10-10(토)
 const WEEK = [
@@ -14,7 +14,7 @@ const WEEK = [
 ]
 
 function mark(kind: 'start' | 'due', date: string, time: string | null = null): CalendarMarkView {
-  return { kind, elementId: `${kind}-${date}`, date, time, needsConfirm: false }
+  return { kind, elementId: `${kind}-${date}`, date, time, endTime: null, needsConfirm: false }
 }
 
 function entry(
@@ -90,5 +90,26 @@ describe('한 주 배치 (설계 7.5 화면)', () => {
     const day = layoutWeek(WEEK, [a, b, c]).marks[5]
 
     expect(day.map(({ entry: e }) => e.blockId)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('시간 글자: 시작·마감은 그 시간, 같은 날 표시는 시작~마감', () => {
+    const same = (time: string | null, endTime: string | null): CalendarMarkView => ({
+      ...mark('due', '2026-10-09'),
+      kind: 'sameDay',
+      time,
+      endTime
+    })
+
+    expect(markTimeText(mark('due', '2026-10-09', '11:00'))).toBe('11:00')
+    expect(markTimeText(mark('start', '2026-10-09'))).toBeNull()
+    expect(markTimeText(same('10:00', '11:00'))).toBe('10:00~11:00')
+    expect(markTimeText(same(null, '15:00'))).toBe('~15:00')
+    expect(markTimeText(same('10:00', null))).toBe('10:00~')
+    expect(markTimeText(same(null, null))).toBeNull()
+  })
+
+  it('줄 높이: 막대가 없는 주도 숫자 줄 + 표시 줄로 올바른 값이다', () => {
+    expect(weekGridRows(0)).toBe('auto 1fr')
+    expect(weekGridRows(2)).toBe('auto auto auto 1fr')
   })
 })
