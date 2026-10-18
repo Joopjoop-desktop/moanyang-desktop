@@ -2,19 +2,19 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.375rem;
   min-width: 0;
 }
 
 .dateRow {
   display: flex;
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 .input {
   width: 100%;
   min-width: 0;
-  padding: 4px 6px;
+  padding: 0.25rem 0.375rem;
   border: 1px solid var(--color-accent);
   border-radius: var(--radius);
   font: inherit;
@@ -23,27 +23,27 @@
 
 .error {
   color: var(--color-warn);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .buttons {
   display: flex;
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 .primary,
 .secondary {
-  padding: 2px 10px;
+  padding: 0.125rem 0.625rem;
   border-radius: var(--radius);
   font: inherit;
-  font-size: 12px;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 
 .primary {
-  border: 1px solid var(--color-accent);
-  background: var(--color-accent);
-  color: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 .primary:disabled {

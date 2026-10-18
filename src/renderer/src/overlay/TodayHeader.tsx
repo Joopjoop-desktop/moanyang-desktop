@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { TODAY_OPACITY_MAX, TODAY_OPACITY_MIN } from '@shared/today'
+import chevronDownLight from '../assets/icons/chevron-down-light.svg'
+import cogLight from '../assets/icons/cog-light.svg'
 import { formatCalendarDate } from '../lib/display'
 import { readTransfer, type FeedInput } from './feed'
 import styles from './TodayWindow.module.css'
@@ -17,7 +19,7 @@ type Props = {
 }
 
 /**
- * 오늘 창 머리줄 (설계 9.7). 창 테두리와 합쳐 40px = 접었을 때 창 높이(코어 TODAY_COLLAPSED_HEIGHT).
+ * 오늘 창 머리줄 (설계 9.7). 52px = 접었을 때 창 높이(코어 TODAY_COLLAPSED_HEIGHT).
  * 빈 곳을 잡고 끌면 창이 움직인다. 버튼은 끌기에서 빼 둔다.
  * ⚙를 누르면 아래에 투명도 슬라이더가 열린다. 접혀 있으면 글자 부분에 글을 놓아 먹일 수 있다.
  */
@@ -71,7 +73,7 @@ export function TodayHeader({
             aria-expanded={settingsOpen}
             onClick={onToggleSettings}
           >
-            ⚙
+            <img src={cogLight} alt="" />
           </button>
         )}
         <button
@@ -80,7 +82,12 @@ export function TodayHeader({
           aria-label={controls.collapsed ? '펼치기' : '접기'}
           onClick={controls.toggleCollapsed}
         >
-          {controls.collapsed ? '▸' : '▾'}
+          {/* 펼쳐져 있으면 아래 화살표, 접혀 있으면 오른쪽으로 눕힌다 */}
+          <img
+            src={chevronDownLight}
+            alt=""
+            className={controls.collapsed ? styles.arrowCollapsed : undefined}
+          />
         </button>
       </header>
 

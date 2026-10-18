@@ -20,6 +20,7 @@ describe('IPC 채널 핸들러', () => {
   let handlers: IpcHandlers
   let queue: ExtractionQueue
   let openedStudio: number
+  let closedStudio: number
   let openedBlockId: string | undefined
   let today: TodayWindowState
   let services: Services
@@ -34,11 +35,15 @@ describe('IPC 채널 핸들러', () => {
       notifier: ctx.notifier
     })
     openedStudio = 0
+    closedStudio = 0
     today = { opacity: 90, collapsed: false }
     handlers = createIpcHandlers(services, queue, {
       openStudio: (blockId) => {
         openedStudio++
         openedBlockId = blockId
+      },
+      closeStudio: () => {
+        closedStudio++
       },
       todayState: () => today,
       setTodayOpacity: (opacity) => (today = { ...today, opacity }),
@@ -234,6 +239,7 @@ describe('IPC 채널 핸들러', () => {
     })
     const slow = createIpcHandlers(services, slowQueue, {
       openStudio: () => undefined,
+      closeStudio: () => undefined,
       todayState: () => today,
       setTodayOpacity: () => today,
       setTodayCollapsed: () => today
@@ -262,6 +268,11 @@ describe('IPC 채널 핸들러', () => {
     expect(await ok('window:openStudio', undefined)).toBeNull()
     expect(openedStudio).toBe(1)
     expect(openedBlockId).toBeUndefined()
+  })
+
+  it('window:closeStudio는 스튜디오 닫기를 요청한다', async () => {
+    expect(await ok('window:closeStudio', undefined)).toBeNull()
+    expect(closedStudio).toBe(1)
   })
 
   it('window:openStudio에 blockId를 주면 그 블록을 연다 (설계 9.7)', async () => {

@@ -159,6 +159,14 @@ function openStudio(blockId?: string): void {
   }
 }
 
+/**
+ * 스튜디오 X 버튼. window.close()는 창의 close 이벤트를 거치지 않고 창을 없애 버리므로,
+ * 메인에서 close()를 불러 hideOnClose(숨기기)를 타게 한다 (설계 9.7).
+ */
+function closeStudio(): void {
+  if (studio && !studio.isDestroyed()) studio.close()
+}
+
 /** 오늘 창 숨기기·보이기 (트레이 메뉴). 보일 때 다른 앱의 초점을 뺏지 않는다. */
 function toggleOverlay(): void {
   if (!overlay || overlay.isDestroyed()) return
@@ -233,7 +241,7 @@ app.whenReady().then(() => {
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     notifier: deps.notifier
   })
-  const windows = { openStudio, ...todayControls }
+  const windows = { openStudio, closeStudio, ...todayControls }
 
   if (import.meta.env.DEV) {
     const handlers = {

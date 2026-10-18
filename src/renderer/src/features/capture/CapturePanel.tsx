@@ -10,7 +10,7 @@ import { useToast } from '../toast/toastContext'
 import { failedCardMessage, pasteProblem } from './captureRules'
 import styles from './CapturePanel.module.css'
 
-/** 스튜디오 맨 위 먹이 칸: 붙여넣기 입력창 + 실패 카드 (설계 9.6) */
+/** 스튜디오 오른쪽 패널 맨 위 먹이 칸: 붙여넣기 입력창 + 실패 카드 (설계 9.6) */
 export function CapturePanel(): React.JSX.Element {
   return (
     <div className={styles.panel}>
@@ -43,9 +43,10 @@ function PasteBox(): React.JSX.Element {
   return (
     <div className={styles.paste}>
       <textarea
-        className={styles.textarea}
-        rows={3}
-        placeholder="메시지를 붙여넣고 Ctrl+Enter로 먹이 주기"
+        // 비어 있을 때만 안내 글을 가운데에 두고, 붙여넣은 글은 왼쪽부터 보여준다
+        className={text ? styles.textarea : `${styles.textarea} ${styles.empty}`}
+        rows={2}
+        placeholder="메시지를 붙여넣고 Ctrl + Enter로 먹이 주기"
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(event) => {

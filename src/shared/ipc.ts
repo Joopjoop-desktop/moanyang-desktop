@@ -66,6 +66,8 @@ export type IpcContract = {
 
   /** 스튜디오 창 열기. blockId를 주면 오른쪽 패널에 그 블록 카드를 연다 (설계 9.7) */
   'window:openStudio': Contract<{ blockId?: string } | void, null>
+  /** 스튜디오 창 닫기. 테두리 없는 창의 X 버튼이 쓴다. 창을 없애지 않고 숨긴다 (설계 9.7) */
+  'window:closeStudio': Contract<void, null>
 
   /** 오늘 창 상태: 투명도·접힘 (설계 9.7) */
   'today:getState': Contract<void, TodayWindowState>
@@ -108,6 +110,7 @@ export const IPC_CHANNELS = [
   'label:detach',
   'calendar:list',
   'window:openStudio',
+  'window:closeStudio',
   'today:getState',
   'today:setOpacity',
   'today:setCollapsed'

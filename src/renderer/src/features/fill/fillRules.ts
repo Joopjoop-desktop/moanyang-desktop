@@ -13,14 +13,16 @@ export function blockTitle(block: BlockView): string {
   return '(할 일 없음)'
 }
 
-const MISSING_LABELS: Record<MissingEssential, string> = {
-  task: '할 일 없음',
-  date: '날짜 없음',
-  dateConfirm: '날짜 확인'
+/** 칩 색: 날짜 쪽은 빨강, 할 일 쪽은 파랑 (Figma Chips) */
+export type MissingTone = 'date' | 'task'
+
+const MISSING_CHIPS: Record<MissingEssential, { label: string; tone: MissingTone }> = {
+  task: { label: '할 일 없음', tone: 'task' },
+  date: { label: '날짜 없음', tone: 'date' },
+  dateConfirm: { label: '날짜 확인', tone: 'date' }
 }
 
-/** 빠진 것 하나(task → date → dateConfirm 순의 첫 번째). 빠진 게 없으면 null */
-export function missingLabel(block: BlockView): string | null {
-  const [first] = block.missing
-  return first ? MISSING_LABELS[first] : null
+/** 빠진 것마다 칩 하나. 코어가 알려 준 순서(task → date → dateConfirm) 그대로. 빠진 게 없으면 빈 목록 */
+export function missingChips(block: BlockView): { label: string; tone: MissingTone }[] {
+  return block.missing.map((missing) => MISSING_CHIPS[missing])
 }

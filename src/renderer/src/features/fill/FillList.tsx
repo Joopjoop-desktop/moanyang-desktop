@@ -3,16 +3,23 @@ import { useState } from 'react'
 import type { BlockListFilter, BlockView } from '@shared/views'
 import { messageForError } from '../../api/errorMessages'
 import { useBlockList } from '../../api/queries'
+import chevronDown from '../../assets/icons/chevron-down.svg'
+import chevronUp from '../../assets/icons/chevron-up.svg'
+import { CompleteCheckbox } from '../board/BlockActionBar'
 import { BlockCard } from '../board/BlockCard'
+import { BlockTitleLine } from '../board/BlockTitleLine'
 import type { DragData, DropData } from '../board/dnd/dropRules'
-import { blockTitle, missingLabel } from './fillRules'
 import styles from './FillList.module.css'
 
 type ListFilter = Extract<BlockListFilter, 'needsInput' | 'undated'>
 
-const SECTIONS: readonly { filter: ListFilter; title: string; empty: string }[] = [
-  { filter: 'needsInput', title: '채워 주세요', empty: '채울 블록이 없어요.' },
-  { filter: 'undated', title: '날짜 없는 일', empty: '날짜 없이 둔 일이 없어요.' }
+/**
+ * title이 없으면 제목 줄을 그리지 않는다: "채워 주세요 N"은 패널 맨 위 머리줄이 이미 보여 준다.
+ * 비어 있는 목록은 아무것도 그리지 않는다(Figma Main2_1).
+ */
+const SECTIONS: readonly { filter: ListFilter; title: string | null }[] = [
+  { filter: 'needsInput', title: null },
+  { filter: 'undated', title: '날짜 없는 일' }
 ]
 
 /** 목록 아래 빈 곳: 요소를 놓으면 새 블록으로 분리 (dropRules의 board) */
@@ -20,11 +27,11 @@ const SPLIT_DROP: DropData = { kind: 'board' }
 
 /**
  * 오른쪽 목록 패널: 채워 주세요 / 날짜 없는 일. (설계 7.6, 9.6)
- * 항목은 한 줄(제목 + 빠진 것). 누르면 그 자리에서 카드가 펼쳐지고, 한 번에 하나만 펼친다.
+ * 항목은 한 줄 카드(체크박스 + 제목·빠진 것 칩·시각 + 펼침 화살표). 누르면 그 자리에서 카드가 펼쳐지고, 한 번에 하나만 펼친다.
  * 빠진 것을 채우면 blocks:changed로 다시 불러와 항목이 저절로 빠진다.
  *
- * 드래그(설계 7.1, 9.6 표): 드래그 영역(FillDnd)은 달력과 같이 쓰도록 바깥에 있다.
- * - 한 줄 손잡이(⠿)를 다른 항목에 놓으면 합치기, 달력 칸에 놓으면 날짜 넣기
+ * 드래그(설계 7.1, 9.6): 드래그 영역(FillDnd)은 달력과 같이 쓰도록 바깥에 있다.
+ * - 한 줄을 잡고 끌어 다른 항목에 놓으면 합치기, 달력 칸에 놓으면 날짜 넣기
  * - 펼친 카드의 요소를 다른 항목에 놓으면 이동, 목록 아래 빈 곳에 놓으면 분리, 카드 안에서는 순서 바꾸기
  */
 export function FillList(): React.JSX.Element {
@@ -37,7 +44,7 @@ export function FillList(): React.JSX.Element {
   const toggle = (blockId: string): void => setOpenId(openId === blockId ? null : blockId)
 
   return (
-    <div className={styles.list}>
+    <>
       {SECTIONS.map((section) => (
         <Section
           key={section.filter}
@@ -48,14 +55,13 @@ export function FillList(): React.JSX.Element {
         />
       ))}
       <SplitZone />
-    </div>
+    </>
   )
 }
 
 type SectionProps = {
   filter: ListFilter
-  title: string
-  empty: string
+  title: string | null
   query: { data: BlockView[] | undefined; error: Error | null }
   openId: string | null
   onToggle: (blockId: string) => void
@@ -64,37 +70,34 @@ type SectionProps = {
 function Section({
   filter,
   title,
-  empty,
   query: { data, error },
   openId,
   onToggle
-}: SectionProps): React.JSX.Element {
+}: SectionProps): React.JSX.Element | null {
+  if (error) return <p className={styles.message}>{messageForError(error)}</p>
+  if (!data) return <p className={styles.message}>불러오는 중…</p>
+  if (data.length === 0) return null
+
   return (
     <section className={styles.section}>
-      <h3 className={styles.title}>
-        {title}
-        {data && data.length > 0 && <span className={styles.count}>{data.length}</span>}
-      </h3>
-      {error ? (
-        <p className={styles.message}>{messageForError(error)}</p>
-      ) : !data ? (
-        <p className={styles.message}>불러오는 중…</p>
-      ) : data.length === 0 ? (
-        <p className={styles.message}>{empty}</p>
-      ) : (
-        <ul className={styles.rows}>
-          {data.map((block) => (
-            <Row
-              key={block.id}
-              block={block}
-              // 날짜 없는 일은 모두 "날짜 없음"이라 따로 표시하지 않는다
-              showMissing={filter === 'needsInput'}
-              open={openId === block.id}
-              onToggle={() => onToggle(block.id)}
-            />
-          ))}
-        </ul>
+      {title && (
+        <h3 className={styles.title}>
+          {title}
+          <span className={styles.count}>{data.length}</span>
+        </h3>
       )}
+      <ul className={styles.rows}>
+        {data.map((block) => (
+          <Row
+            key={block.id}
+            block={block}
+            // 날짜 없는 일은 모두 "날짜 없음"이라 따로 표시하지 않는다
+            showMissing={filter === 'needsInput'}
+            open={openId === block.id}
+            onToggle={() => onToggle(block.id)}
+          />
+        ))}
+      </ul>
     </section>
   )
 }
@@ -107,11 +110,11 @@ type RowProps = {
 }
 
 /**
- * 한 줄 항목. 줄 전체가 놓는 곳(요소는 맨 뒤로 이동, 블록은 합치기)이고 손잡이로 블록을 끈다.
- * 펼치면 아래에 카드가 나온다. 카드의 요소는 끌 수 있고, 블록 손잡이는 줄에만 둔다.
+ * 한 줄 카드. 줄 전체가 놓는 곳(요소는 맨 뒤로 이동, 블록은 합치기)이고 줄을 잡고 블록을 끈다.
+ * 6px 넘게 움직여야 끌기가 시작하므로 짧게 누르면 펼치기다. 체크박스는 끌기 영역 밖이다.
+ * 펼치면 아래에 카드 내용이 이어 붙는다. 카드의 요소는 끌 수 있다.
  */
 function Row({ block, showMissing, open, onToggle }: RowProps): React.JSX.Element {
-  const missing = showMissing ? missingLabel(block) : null
   const dropData: DropData = { kind: 'blockArea', blockId: block.id }
   const dragData: DragData = { kind: 'block', blockId: block.id }
   const { setNodeRef: setDropRef } = useDroppable({ id: `row:${block.id}`, data: dropData })
@@ -123,33 +126,31 @@ function Row({ block, showMissing, open, onToggle }: RowProps): React.JSX.Elemen
   } = useDraggable({ id: `row-drag:${block.id}`, data: dragData })
   const targeted = useIsDropTarget(block.id)
 
-  const lineClass = [
-    styles.line,
-    open ? styles.open : '',
+  const rowClass = [
+    styles.row,
     targeted ? styles.target : '',
     isDragging ? styles.dragging : ''
   ].join(' ')
 
   return (
-    <li className={styles.row}>
-      <div ref={setDropRef} className={lineClass}>
+    <li className={rowClass}>
+      <div ref={setDropRef} className={styles.line}>
+        <CompleteCheckbox block={block} />
         <button
           ref={setDragRef}
           type="button"
-          className={styles.handle}
-          aria-label="블록 끌어서 합치기"
+          className={styles.toggle}
+          aria-expanded={open}
+          title="끌어서 합치거나 날짜 칸에 놓기"
+          onClick={onToggle}
           {...listeners}
           {...attributes}
         >
-          ⠿
-        </button>
-        <button type="button" className={styles.toggle} aria-expanded={open} onClick={onToggle}>
-          <span className={styles.arrow}>{open ? '▾' : '▸'}</span>
-          <span className={styles.lineTitle}>{blockTitle(block)}</span>
-          {missing && <span className={styles.missing}>{missing}</span>}
+          <BlockTitleLine block={block} open={open} showMissing={showMissing} />
+          <img className={styles.arrow} src={open ? chevronUp : chevronDown} alt="" />
         </button>
       </div>
-      {open && <BlockCard block={block} handle={false} />}
+      {open && <BlockCard block={block} handle={false} embedded />}
     </li>
   )
 }

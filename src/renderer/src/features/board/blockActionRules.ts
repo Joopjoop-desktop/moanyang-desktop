@@ -19,7 +19,7 @@ export const BLOCK_ACTIONS: Record<
   unreview: { label: '이대로 두기 취소', done: '채워 주세요로 돌려놨어요.', undo: null },
   complete: { label: '완료', done: '완료했어요.', undo: 'reopen' },
   reopen: { label: '완료 취소', done: '완료를 취소했어요.', undo: null },
-  delete: { label: '삭제', done: '삭제했어요.', undo: 'restore' },
+  delete: { label: '삭제하기', done: '삭제했어요.', undo: 'restore' },
   restore: { label: '복구', done: '복구했어요.', undo: null }
 }
 

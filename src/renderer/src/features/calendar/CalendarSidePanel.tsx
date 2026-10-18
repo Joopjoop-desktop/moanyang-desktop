@@ -2,8 +2,10 @@ import { DndContext } from '@dnd-kit/core'
 import type { CalendarEntryView } from '@shared/calendar'
 import { ApiError } from '../../api/client'
 import { messageForError } from '../../api/errorMessages'
-import { useBlock } from '../../api/queries'
+import { useBlock, useBlockList } from '../../api/queries'
+import mascot from '../../assets/mascot/peek.svg'
 import { BlockCard } from '../board/BlockCard'
+import { CapturePanel } from '../capture/CapturePanel'
 import { FillList } from '../fill/FillList'
 import { dayOfMonth } from './calendarDates'
 import styles from './CalendarSidePanel.module.css'
@@ -28,6 +30,7 @@ type Props = {
 
 /**
  * 스튜디오 오른쪽 패널. 항상 열려 있고 기본은 목록이다. (설계 7.5, 9.6)
+ * 맨 위 머리줄("채워 주세요 N" 또는 "← 목록") 아래에 먹이 칸이 늘 있고, 그 아래가 목록·블록 카드·하루 목록이다.
  * 블록 카드는 BlockCard를 그대로 써서 그 자리에서 수정한다. 카드에서 삭제·완료하면 목록으로 돌아간다.
  */
 export function CalendarSidePanel({
@@ -38,40 +41,58 @@ export function CalendarSidePanel({
 }: Props): React.JSX.Element {
   return (
     <aside className={styles.panel}>
-      {content.kind === 'list' ? (
-        <FillList />
-      ) : (
-        <>
-          <header className={styles.header}>
+      <img className={styles.mascot} src={mascot} alt="" />
+      <header className={styles.header}>
+        {content.kind === 'list' ? (
+          <FillHeading />
+        ) : (
+          <>
             <button type="button" className={styles.back} onClick={onBack}>
               ← 목록
             </button>
             {content.kind === 'day' && (
-              <span className={styles.heading}>{dayHeading(content.date)}</span>
+              <span className={styles.dayHeading}>{dayHeading(content.date)}</span>
             )}
-          </header>
-          {content.kind === 'block' ? (
-            <BlockDetail blockId={content.blockId} onLeave={onBack} />
-          ) : dayEntries.length === 0 ? (
-            <p className={styles.message}>이 날은 일정이 없어요.</p>
-          ) : (
-            <ul className={styles.dayList}>
-              {dayEntries.map((entry) => (
-                <li key={entry.blockId}>
-                  <button
-                    type="button"
-                    className={entry.completed ? `${styles.item} ${styles.completed}` : styles.item}
-                    onClick={() => onOpenBlock(entry.blockId)}
-                  >
-                    {entry.title}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
+          </>
+        )}
+      </header>
+
+      <CapturePanel />
+
+      <div className={styles.content}>
+        {content.kind === 'list' ? (
+          <FillList />
+        ) : content.kind === 'block' ? (
+          <BlockDetail blockId={content.blockId} onLeave={onBack} />
+        ) : dayEntries.length === 0 ? (
+          <p className={styles.message}>이 날은 일정이 없어요.</p>
+        ) : (
+          <ul className={styles.dayList}>
+            {dayEntries.map((entry) => (
+              <li key={entry.blockId}>
+                <button
+                  type="button"
+                  className={entry.completed ? `${styles.item} ${styles.completed}` : styles.item}
+                  onClick={() => onOpenBlock(entry.blockId)}
+                >
+                  {entry.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </aside>
+  )
+}
+
+/** "채워 주세요 N": 채워야 할 블록 수 */
+function FillHeading(): React.JSX.Element {
+  const { data } = useBlockList('needsInput')
+  return (
+    <h2 className={styles.heading}>
+      채워 주세요<span className={styles.count}>{data?.length ?? 0}</span>
+    </h2>
   )
 }
 
