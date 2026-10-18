@@ -1,24 +1,57 @@
 /*
  * 디자인 값은 여기 CSS 변수로만 정한다. 각 화면의 *.module.css는 이 변수를 쓴다. (설계 9.6)
  * 스튜디오(main.css)와 오늘 창(overlay.css)이 함께 쓴다.
+ * 값은 Figma "작업 파일"의 색 스타일(Gray/G00~G100, Main/Black·Blue·Red)을 따른다.
  */
 :root {
-  --color-bg: #f6f7f9;
-  --color-sidebar: #eef0f3;
-  --color-surface: #ffffff;
-  --color-hover: #e4e7ec;
-  --color-border: #e1e4e8;
-  --color-text: #1f1f1f;
-  --color-muted: #6b7280;
-  --color-accent: #3b5bdb;
-  --color-accent-soft: #e7ecff;
+  /* Figma Gray 단계 */
+  --gray-00: #ffffff;
+  --gray-20: #f9f9f9;
+  --gray-30: #f0f0f0;
+  --gray-40: #e0e0e0;
+  --gray-50: #b8b8b8;
+  --gray-60: #8b8b8b;
+  --gray-70: #696969;
+  --gray-80: #4b4b4b;
+  --gray-90: #3b3b3b;
+  --gray-100: #2a2a2a;
+
+  --color-bg: var(--gray-20);
+  --color-sidebar: var(--gray-20);
+  --color-surface: var(--gray-00);
+  --color-hover: var(--gray-30);
+  --color-border: var(--gray-40);
+  --color-text: var(--gray-100);
+  --color-muted: var(--gray-70);
+
+  /* 주 버튼·머리줄 (Main/Black) */
+  --color-primary: #1a1a1a;
+  --color-primary-text: #ffffff;
+
+  /* 토요일·강조·"할 일 없음" 칩 (Main/Blue) */
+  --color-accent: #164bee;
+  --color-accent-soft: #e6eefe;
+  /* 일요일·"날짜 없음" 칩·경고 (Main/Red) */
+  --color-warn: #e70023;
+  --color-warn-soft: #fde5e9;
+
+  /* Figma에 없는 성공 색은 기존 값을 그대로 둔다 */
   --color-success: #2b8a3e;
   --color-success-soft: #e3f6e7;
-  --color-warn: #c2410c;
-  --color-warn-soft: #fff1e6;
-  --radius: 6px;
-  --radius-lg: 10px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+  --radius: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-window: 1rem;
+  --radius-pill: 1.25rem;
+
+  /* Figma 효과: 카드 그림자 */
+  --shadow: 0 2px 6px rgba(42, 42, 42, 0.1);
+  --shadow-panel: 0 2px 12px 2px rgba(42, 42, 42, 0.1);
+  --shadow-button: 0 2px 2px rgba(42, 42, 42, 0.15);
+
+  --font-family:
+    'Pretendard Variable', Pretendard, 'Segoe UI', 'Malgun Gothic', system-ui, -apple-system,
+    sans-serif;
 }
 
 *,
@@ -35,12 +68,37 @@ body,
 }
 
 body {
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    'Malgun Gothic',
-    sans-serif;
-  font-size: 14px;
+  font-family: var(--font-family);
+  font-size: 0.875rem;
   color: var(--color-text);
+}
+
+/* 버튼·입력칸은 글꼴을 따로 정하지 않으면 시스템 글꼴로 돌아간다 */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* 스크롤바: 얇고 연하게 (두 창 공통) */
+::-webkit-scrollbar {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 62.4375rem;
+  background: var(--gray-50);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-60);
+  background-clip: content-box;
 }
