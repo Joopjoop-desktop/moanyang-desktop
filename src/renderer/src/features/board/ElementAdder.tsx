@@ -3,6 +3,8 @@ import { useState } from 'react'
 import type { UpdateElementInput } from '@shared/elements'
 import type { ElementType } from '@shared/model'
 import type { BlockView } from '@shared/views'
+import plusIcon from '../../assets/icons/plus.svg'
+import closeIcon from '../../assets/icons/x-gray.svg'
 import { unwrap } from '../../api/client'
 import { messageForError } from '../../api/errorMessages'
 import { ELEMENT_TYPE_LABELS } from '../../lib/display'
@@ -16,7 +18,7 @@ type State =
   | { step: 'editing'; type: ElementType; draft: ElementDraft }
 
 /**
- * 블록 아래 "+ 추가". (설계 7.7, 9.6)
+ * 블록 아래 "추가 +". (설계 7.7, 9.6)
  * 누르면 지금 추가할 수 있는 종류만 메뉴로 보여준다(코어가 BlockView.addable로 알려줌).
  * 고르면 빈 편집칸이 열린다. 저장하면 코어가 정해진 순서 자리에 넣는다.
  * Enter(여러 줄 칸은 Ctrl+Enter)로 저장, Esc로 취소. 빈 채로 저장하면 만들지 않고 닫는다.
@@ -41,7 +43,8 @@ export function ElementAdder({ block }: { block: BlockView }): React.JSX.Element
   if (state.step === 'closed') {
     return (
       <button type="button" className={styles.add} onClick={() => setState({ step: 'menu' })}>
-        + 추가
+        추가
+        <img src={plusIcon} alt="" />
       </button>
     )
   }
@@ -59,8 +62,8 @@ export function ElementAdder({ block }: { block: BlockView }): React.JSX.Element
             {ELEMENT_TYPE_LABELS[type]}
           </button>
         ))}
-        <button type="button" className={styles.cancel} onClick={close}>
-          취소
+        <button type="button" className={styles.cancel} aria-label="취소" onClick={close}>
+          <img src={closeIcon} alt="" />
         </button>
       </div>
     )

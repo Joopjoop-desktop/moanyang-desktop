@@ -1,0 +1,56 @@
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.title {
+  min-width: 0;
+  max-width: 13.9375rem;
+  overflow: hidden;
+  color: var(--gray-90);
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.5rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 빠진 것 칩 (Figma Chips): 날짜는 빨강, 할 일은 파랑 */
+.chip {
+  flex-shrink: 0;
+  padding: 0 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5rem;
+  white-space: nowrap;
+}
+
+.date {
+  background: var(--color-warn-soft);
+  color: var(--color-warn);
+}
+
+.task {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.meta {
+  color: var(--gray-50);
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+}
+
+.metaOpen {
+  color: var(--gray-70);
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ElementType } from '@shared/model'
 import type { BlockView, ElementView } from '@shared/views'
-import { blockTitle, missingLabel } from './fillRules'
+import { blockTitle, missingChips } from './fillRules'
 
 function element(type: ElementType, value: string | null): ElementView {
   return {
@@ -48,10 +48,12 @@ describe('목록 한 줄 항목 (설계 9.6)', () => {
     expect(blockTitle(block([element('memo', '메모')]))).toBe('(할 일 없음)')
   })
 
-  it('빠진 것은 첫 번째 하나만 짧게', () => {
-    expect(missingLabel(block([], ['task', 'date']))).toBe('할 일 없음')
-    expect(missingLabel(block([], ['date']))).toBe('날짜 없음')
-    expect(missingLabel(block([], ['dateConfirm']))).toBe('날짜 확인')
-    expect(missingLabel(block([], []))).toBeNull()
+  it('빠진 것마다 칩 하나: 날짜 쪽은 date, 할 일 쪽은 task 색', () => {
+    expect(missingChips(block([], ['task', 'date']))).toEqual([
+      { label: '할 일 없음', tone: 'task' },
+      { label: '날짜 없음', tone: 'date' }
+    ])
+    expect(missingChips(block([], ['dateConfirm']))).toEqual([{ label: '날짜 확인', tone: 'date' }])
+    expect(missingChips(block([], []))).toEqual([])
   })
 })
