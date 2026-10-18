@@ -3,7 +3,10 @@ import { useState } from 'react'
 import { unwrap } from '../api/client'
 import { messageForError } from '../api/errorMessages'
 import { useBlock } from '../api/queries'
+import chevronDown from '../assets/icons/chevron-down.svg'
+import chevronUp from '../assets/icons/chevron-up.svg'
 import { runBlockAction } from '../features/board/blockActionRules'
+import checkboxStyles from '../features/ui/checkbox.module.css'
 import { describeElement, ELEMENT_TYPE_LABELS } from '../lib/display'
 import { TODAY_KIND_LABELS, type TodayRow } from './todayRows'
 import styles from './TodayWindow.module.css'
@@ -41,7 +44,7 @@ export function TodayList({ rows, error }: Props): React.JSX.Element {
             <div className={row.completed ? `${styles.line} ${styles.done}` : styles.line}>
               <input
                 type="checkbox"
-                className={styles.check}
+                className={checkboxStyles.checkbox}
                 checked={row.completed}
                 disabled={check.isPending}
                 aria-label={row.completed ? '완료 취소' : '완료'}
@@ -53,9 +56,14 @@ export function TodayList({ rows, error }: Props): React.JSX.Element {
                 aria-expanded={openId === row.blockId}
                 onClick={() => setOpenId(openId === row.blockId ? null : row.blockId)}
               >
-                {row.time && <span className={styles.time}>{row.time}</span>}
                 <span className={styles.title}>{row.title}</span>
+                {row.time && <span className={styles.time}>{row.time}</span>}
                 <span className={styles.kind}>{TODAY_KIND_LABELS[row.kind]}</span>
+                <img
+                  className={styles.arrow}
+                  src={openId === row.blockId ? chevronUp : chevronDown}
+                  alt=""
+                />
               </button>
             </div>
             {openId === row.blockId && <RowDetail blockId={row.blockId} />}

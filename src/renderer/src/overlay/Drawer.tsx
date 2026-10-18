@@ -51,9 +51,6 @@ export function Drawer({ drawer }: { drawer: DrawerFeed }): React.JSX.Element {
           drawer.feed(readTransfer(event.dataTransfer), 'drag')
         }}
       >
-        <span className={styles.icon} aria-hidden>
-          ▤
-        </span>
         <p className={styles.text}>{text}</p>
         {pasteMode && (
           // 보이지 않는 입력칸에 초점을 줘서 Ctrl+V를 받는다. 다른 곳을 누르면(초점을 잃으면) 끝난다.

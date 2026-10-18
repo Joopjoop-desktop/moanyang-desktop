@@ -10,12 +10,15 @@ import type { Point } from './overlayPosition'
 
 type RendererPage = 'index' | 'overlay'
 
-/** 오늘 창: 폭은 고정, 높이는 세로로만 조절 (설계 9.7) */
-export const TODAY_WIDTH = 260
-export const TODAY_DEFAULT_HEIGHT = 420
-export const TODAY_MIN_HEIGHT = 160
+/**
+ * 오늘 창: 폭은 고정, 높이는 세로로만 조절 (설계 9.7).
+ * Figma Sub_Header(폭 370, 머리줄 60)를 87.5%로 줄인 크기다. 화면 글자 기준(overlay.css의 14px)과 같이 움직인다.
+ */
+export const TODAY_WIDTH = 324
+export const TODAY_DEFAULT_HEIGHT = 456
+export const TODAY_MIN_HEIGHT = 210
 /** 접었을 때 높이 = 화면의 머리줄 높이 (오늘 창 CSS와 같아야 한다) */
-export const TODAY_COLLAPSED_HEIGHT = 40
+export const TODAY_COLLAPSED_HEIGHT = 52
 
 /** 두 창 공통 보안 설정 (설계 11장) */
 const webPreferences: Electron.WebPreferences = {
