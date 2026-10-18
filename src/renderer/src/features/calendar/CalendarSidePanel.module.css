@@ -1,36 +1,77 @@
+/* 오른쪽 패널: 폭 390px 고정 (Figma Main2_2) */
 .panel {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: 360px;
+  width: 24.375rem;
   flex-shrink: 0;
-  padding: 20px 16px;
-  overflow-y: auto;
-  border-left: 1px solid var(--color-border);
-  background: var(--color-sidebar);
+  min-height: 0;
 }
 
+/* 먹이 칸 오른쪽 위에 걸쳐 앉아 있는 고양이 (Figma Group 1321317877: 76px, 머리줄보다 12px 위) */
+.mascot {
+  position: absolute;
+  top: -0.75rem;
+  right: 0;
+  z-index: 2;
+  width: 4.75rem;
+  pointer-events: none;
+}
+
+/* 머리줄 높이 28 + 아래 20 = 달력 요일 줄과 같은 높이에서 먹이 칸이 시작한다 */
 .header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
-  gap: 12px;
+  gap: 0.75rem;
+  height: 1.75rem;
+  margin-bottom: 1.25rem;
 }
 
 .heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.count {
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.dayHeading {
+  color: var(--color-text);
+  font-size: 1.125rem;
   font-weight: 600;
 }
 
 .back {
-  padding: 2px 4px;
+  padding: 0.125rem 0.25rem;
   border: none;
   background: transparent;
   color: var(--color-muted);
   font: inherit;
+  font-size: 1rem;
   cursor: pointer;
 }
 
 .back:hover {
-  color: var(--color-accent);
+  color: var(--color-text);
+}
+
+/* 먹이 칸 아래: 남는 높이에서 스크롤. 카드 그림자가 잘리지 않게 안쪽 여백을 둔다 */
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1.0625rem;
+  min-height: 0;
+  margin: 1.5rem -0.5rem -0.5rem;
+  padding: 0.25rem 0.5rem 0.5rem;
+  overflow-y: auto;
 }
 
 .message {
@@ -40,28 +81,31 @@
 .dayList {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.5rem;
   padding: 0;
   list-style: none;
 }
 
 .item {
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  padding: 0.75rem;
+  border: none;
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
-  color: var(--color-text);
+  box-shadow: var(--shadow-panel);
+  color: var(--gray-90);
   font: inherit;
+  font-size: 1.125rem;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
 }
 
 .item:hover {
-  border-color: var(--color-accent);
+  background: var(--color-hover);
 }
 
 .completed {
-  opacity: 0.45;
+  color: var(--gray-60);
   text-decoration: line-through;
 }

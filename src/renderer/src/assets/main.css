@@ -1,16 +1,64 @@
 /* 스튜디오 창 기본 모양. 색·크기 변수는 tokens.css */
-body {
-  background: var(--color-bg);
+
+/*
+ * 글자·칸 크기는 모두 rem이고, 여기서 정한 루트 글자 크기를 따라 같이 커지고 줄어든다.
+ * Figma 프레임(1336×824)에서 16px이고, 창의 너비와 높이 중 더 빡빡한 쪽에 맞춘다(12~20px).
+ */
+html {
+  font-size: clamp(12px, min(1.1976vw, 1.9417vh), 20px);
 }
 
-/* 위 먹이 칸, 아래 캘린더 + 오른쪽 목록 패널 (설계 9.6) */
+/* 창이 투명이라 둥근 판(.app)만 보인다. 오늘 창(overlay.css)과 같은 방식 */
+html,
+body {
+  background: transparent;
+  overflow: hidden;
+}
+
+/* 맨 위 검은 줄, 아래 달력 + 오른쪽 패널 (설계 9.6) */
 .app {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-window);
+  background: var(--color-bg);
 }
 
-.app-feed {
+/* 검은 줄: 빈 곳을 잡고 끌면 창이 움직인다. 버튼은 끌기에서 빼야 눌린다 */
+.app-titlebar {
+  position: relative;
+  display: flex;
   flex-shrink: 0;
-  padding: 16px 24px 0;
+  align-items: center;
+  justify-content: center;
+  height: 3.25rem;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.app-logo {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.app-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.75rem;
+  display: flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.app-close img {
+  width: 1.25rem;
+  height: 1.25rem;
 }

@@ -1,6 +1,10 @@
 import { useDroppable } from '@dnd-kit/core'
 import { useEffect, useState } from 'react'
 import type { CalendarEntryView } from '@shared/calendar'
+import chevronLeft from '../../assets/icons/chevron-left.svg'
+import chevronRight from '../../assets/icons/chevron-right.svg'
+import taskChip from '../../assets/icons/task-chip.svg'
+import taskChipDone from '../../assets/icons/task-chip-done.svg'
 import { messageForError } from '../../api/errorMessages'
 import { useCalendar } from '../../api/queries'
 import type { DragData, DropData } from '../board/dnd/dropRules'
@@ -23,7 +27,8 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
 /**
  * 스튜디오 가운데 월간 달력 + 오른쪽 패널. (설계 7.5, 9.6)
- * 시작일은 점, 마감일은 마감 표시, 시작~마감은 기간 막대. 완료는 흐리게, 확인 필요는 점선.
+ * 시작일·마감일·시작~마감 기간 막대는 모두 "할 일 칩"(고양이 아이콘 + 제목)으로 그린다.
+ * 마감일 칩은 왼쪽에 빨간 선, 완료는 회색 칩에 취소선, 확인 필요는 점선. (Figma Task_Calendar)
  * 오른쪽 패널은 항상 열려 있고 기본은 채워 주세요 목록이다.
  * 막대·표시를 누르면 블록 카드를, 날짜 칸이나 "+N개"를 누르면 그날의 블록 목록을 패널에 띄운다.
  * 목록의 한 줄 항목을 날짜 칸에 끌어다 놓으면 날짜 넣기 창을 띄운다(목록과 달력이 드래그 영역을 같이 쓴다).
@@ -58,28 +63,32 @@ export function CalendarView(): React.JSX.Element {
             <div className={styles.nav}>
               <button
                 type="button"
+                className={styles.iconButton}
                 aria-label="지난달"
                 onClick={() => setShown(shiftMonth(shown, -1))}
               >
-                ‹
+                <img src={chevronLeft} alt="" />
               </button>
               <button type="button" onClick={() => setShown(monthOf(today))}>
                 오늘
               </button>
               <button
                 type="button"
+                className={styles.iconButton}
                 aria-label="다음달"
                 onClick={() => setShown(shiftMonth(shown, 1))}
               >
-                ›
+                <img src={chevronRight} alt="" />
               </button>
             </div>
             {error && <span className={styles.error}>{messageForError(error)}</span>}
           </header>
 
           <div className={styles.weekdays}>
-            {WEEKDAYS.map((name) => (
-              <span key={name}>{name}</span>
+            {WEEKDAYS.map((name, col) => (
+              <span key={name} className={weekdayClass(col)}>
+                {name}
+              </span>
             ))}
           </div>
 
@@ -114,6 +123,13 @@ function monthOf(date: string): YearMonth {
   return { year: Number(date.slice(0, 4)), month: Number(date.slice(5, 7)) }
 }
 
+/** 일요일(첫 칸)은 빨강, 토요일(마지막 칸)은 파랑. 요일 줄과 날짜 숫자가 같이 쓴다 */
+function weekdayClass(col: number): string {
+  if (col === 0) return styles.sunday
+  if (col === 6) return styles.saturday
+  return ''
+}
+
 type WeekRowProps = {
   week: string[]
   entries: CalendarEntryView[]
@@ -144,11 +160,7 @@ function WeekRow({
         <DayCell
           key={date}
           date={date}
-          className={[
-            styles.day,
-            inMonth(date, shown) ? '' : styles.otherMonth,
-            date === today ? styles.today : ''
-          ].join(' ')}
+          className={[styles.day, inMonth(date, shown) ? '' : styles.otherMonth].join(' ')}
           style={{ gridColumn: col + 1, gridRow: `1 / span ${marksRow}` }}
           onOpen={() => onOpenDay(date)}
         />
@@ -157,7 +169,12 @@ function WeekRow({
       {week.map((date, col) => (
         <span
           key={`n-${date}`}
-          className={styles.dayNumber}
+          className={[
+            styles.dayNumber,
+            weekdayClass(col),
+            inMonth(date, shown) ? '' : styles.dim,
+            date === today ? styles.todayNumber : ''
+          ].join(' ')}
           style={{ gridColumn: col + 1, gridRow: 1 }}
         >
           {dayOfMonth(date)}
@@ -181,7 +198,12 @@ function WeekRow({
           title={bar.entry.title}
           onClick={() => onOpenBlock(bar.entry.blockId)}
         >
-          {bar.entry.title}
+          <img
+            className={styles.chipIcon}
+            src={bar.entry.completed ? taskChipDone : taskChip}
+            alt=""
+          />
+          <span className={styles.chipText}>{bar.entry.title}</span>
         </button>
       ))}
 
@@ -240,7 +262,7 @@ function DayCell({ date, className, style, onOpen }: DayCellProps): React.JSX.El
 const MARK_KIND_LABELS = { start: '시작', due: '마감', sameDay: '시작·마감' } as const
 
 /**
- * 시작일은 점, 마감일과 같은 날 시작·마감은 마감 표시. 시간이 있으면 앞에 붙인다
+ * 시작일은 보통 칩, 마감일과 같은 날 시작·마감은 왼쪽에 빨간 선이 있는 칩. 시간이 있으면 앞에 붙인다
  * (같은 날은 10:00~11:00). 누르면 블록 카드
  */
 function MarkItem({ item, onOpen }: { item: DayMark; onOpen: () => void }): React.JSX.Element {
@@ -259,8 +281,9 @@ function MarkItem({ item, onOpen }: { item: DayMark; onOpen: () => void }): Reac
         title={`${MARK_KIND_LABELS[mark.kind]}: ${time ? `${time} ` : ''}${entry.title}`}
         onClick={onOpen}
       >
+        <img className={styles.chipIcon} src={entry.completed ? taskChipDone : taskChip} alt="" />
         {time && <span className={styles.time}>{time}</span>}
-        <span className={styles.markTitle}>{entry.title}</span>
+        <span className={styles.chipText}>{entry.title}</span>
       </button>
     </li>
   )
