@@ -25,11 +25,28 @@ const webPreferences: Electron.WebPreferences = {
   sandbox: true
 }
 
+/** 스튜디오 창 기본 크기 = Figma 메인 화면(Main2_1·Main2_2) 프레임 */
+export const STUDIO_WIDTH = 1336
+export const STUDIO_HEIGHT = 824
+export const STUDIO_MIN_WIDTH = 1100
+export const STUDIO_MIN_HEIGHT = 680
+
+/**
+ * 스튜디오 창: 테두리 없는 투명 창. 둥근 모서리와 맨 위 검은 줄(Logo, 닫기 X)은 화면이 그린다.
+ * 줄을 잡고 끌면 창이 움직이고, X는 창 닫기(= 숨기기, hideOnClose)다. 둥근 모서리가 잘리지 않게 최대화는 막는다.
+ */
 export function createStudioWindow(): BrowserWindow {
   const window = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: STUDIO_WIDTH,
+    height: STUDIO_HEIGHT,
+    minWidth: STUDIO_MIN_WIDTH,
+    minHeight: STUDIO_MIN_HEIGHT,
     show: false,
+    frame: false,
+    transparent: true,
+    hasShadow: false,
+    maximizable: false,
+    fullscreenable: false,
     autoHideMenuBar: true,
     webPreferences
   })

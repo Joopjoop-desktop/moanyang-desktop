@@ -8,6 +8,8 @@ import * as schemas from './schemas'
 export type WindowControls = {
   /** blockId가 있으면 스튜디오 오른쪽 패널에 그 블록 카드를 연다 */
   openStudio: (blockId?: string) => void
+  /** 스튜디오 창의 닫기를 요청한다. 숨기기는 창의 close 처리가 맡는다 */
+  closeStudio: () => void
   /** 오늘 창 (설계 9.7). 바꾼 뒤의 상태를 돌려준다 */
   todayState: () => TodayWindowState
   setTodayOpacity: (opacity: number) => TodayWindowState
@@ -162,6 +164,14 @@ export function createIpcHandlers(
         // 요청 없이 부르면 검증을 거친 값이 undefined다(계약 타입은 void)
         const { blockId } = (request ?? {}) as { blockId?: string }
         windows.openStudio(blockId)
+        return null
+      }
+    },
+
+    'window:closeStudio': {
+      schema: schemas.noRequest,
+      handle: () => {
+        windows.closeStudio()
         return null
       }
     },
