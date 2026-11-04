@@ -1,5 +1,6 @@
 import 'pretendard/dist/web/variable/pretendardvariable.css'
 import './assets/tokens.css'
+import './assets/tailwind.css'
 import './assets/main.css'
 
 import { QueryClientProvider } from '@tanstack/react-query'

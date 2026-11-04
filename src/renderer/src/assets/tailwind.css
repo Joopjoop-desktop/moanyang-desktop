@@ -1,0 +1,74 @@
+/*
+ * Tailwind 진입점. 스튜디오(main.tsx)와 오늘 창(overlay/main.tsx)이 함께 쓴다.
+ *
+ * CSS Modules에서 Tailwind로 컴포넌트별로 옮기는 중이다.
+ * - preflight(기본 리셋)는 넣지 않는다. 아직 안 옮긴 컴포넌트가 브라우저 기본값과
+ *   tokens.css 리셋에 기대고 있어서다. 모두 옮긴 뒤 켠다.
+ * - Tailwind는 layer 안에 있고 *.module.css는 layer 밖이라, 한 요소에 둘을 섞으면
+ *   모듈 쪽이 이긴다. 컴포넌트 하나는 한 번에 다 옮긴다.
+ * - 값은 tokens.css의 :root 변수가 정한다. 아래 @theme는 그 변수를 Tailwind 이름에 잇기만 한다.
+ * - 크기는 rem으로 쓴다(87.5% 스케일이 root 글자 크기를 따른다). 창 크기 상수와 맞춘
+ *   px(windows.ts)만 h-[52px]처럼 px 임의값으로 둔다.
+ */
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+/* 클래스는 렌더러 코드(src/renderer/src)에서만 찾는다 */
+@import 'tailwindcss/utilities.css' layer(utilities) source('../');
+
+@theme inline reference {
+  /* Tailwind 기본 색은 끈다. 색은 토큰으로만 쓴다. */
+  --color-*: initial;
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-gray-00: var(--gray-00);
+  --color-gray-20: var(--gray-20);
+  --color-gray-30: var(--gray-30);
+  --color-gray-40: var(--gray-40);
+  --color-gray-50: var(--gray-50);
+  --color-gray-60: var(--gray-60);
+  --color-gray-70: var(--gray-70);
+  --color-gray-80: var(--gray-80);
+  --color-gray-90: var(--gray-90);
+  --color-gray-100: var(--gray-100);
+
+  --color-bg: var(--color-bg);
+  --color-sidebar: var(--color-sidebar);
+  --color-surface: var(--color-surface);
+  --color-hover: var(--color-hover);
+  --color-border: var(--color-border);
+  --color-text: var(--color-text);
+  --color-muted: var(--color-muted);
+  --color-primary: var(--color-primary);
+  --color-primary-text: var(--color-primary-text);
+  --color-accent: var(--color-accent);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-warn: var(--color-warn);
+  --color-warn-soft: var(--color-warn-soft);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+
+  /* rounded / rounded-lg / rounded-window / rounded-pill (기본 크기 키 rounded-md 등은 쓰지 않는다) */
+  --radius: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-window: var(--radius-window);
+  --radius-pill: var(--radius-pill);
+
+  /* shadow / shadow-panel / shadow-button (기본 크기 키 shadow-lg 등은 쓰지 않는다) */
+  --shadow: var(--shadow);
+  --shadow-panel: var(--shadow-panel);
+  --shadow-button: var(--shadow-button);
+
+  --font-sans: var(--font-family);
+}
+
+/* 창 끌기 영역 (frame: false 창) */
+@utility app-drag {
+  -webkit-app-region: drag;
+}
+
+@utility app-no-drag {
+  -webkit-app-region: no-drag;
+}

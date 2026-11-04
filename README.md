@@ -262,13 +262,13 @@ IPC → Service → Domain / Repository → DB
 
 ## 기술 스택
 
-| 영역      | 사용 기술                                                 |
-| --------- | --------------------------------------------------------- |
-| 앱        | Electron 44, TypeScript                                   |
-| 화면      | React 19, TanStack Query, dnd-kit, CSS Modules + CSS 변수 |
-| 빌드      | electron-vite, electron-builder                           |
-| 로컬 DB   | SQLite (better-sqlite3), Drizzle ORM·drizzle-kit          |
-| 입력 검증 | zod                                                       |
-| 테스트    | Vitest (단위). Playwright(E2E)는 12단계                   |
-| 코드 품질 | ESLint, Prettier, husky + lint-staged                     |
-| 대상 OS   | Windows (macOS는 이후)                                    |
+| 영역      | 사용 기술                                                                               |
+| --------- | --------------------------------------------------------------------------------------- |
+| 앱        | Electron 44, TypeScript                                                                 |
+| 화면      | React 19, TanStack Query, dnd-kit, Tailwind CSS v4 + CSS 변수 (CSS Modules에서 전환 중) |
+| 빌드      | electron-vite, electron-builder                                                         |
+| 로컬 DB   | SQLite (better-sqlite3), Drizzle ORM·drizzle-kit                                        |
+| 입력 검증 | zod                                                                                     |
+| 테스트    | Vitest (단위). Playwright(E2E)는 12단계                                                 |
+| 코드 품질 | ESLint, Prettier, husky + lint-staged                                                   |
+| 대상 OS   | Windows (macOS는 이후)                                                                  |
