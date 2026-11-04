@@ -6,7 +6,7 @@ import { useBlock } from '../api/queries'
 import chevronDown from '../assets/icons/chevron-down.svg'
 import chevronUp from '../assets/icons/chevron-up.svg'
 import { runBlockAction } from '../features/board/blockActionRules'
-import checkboxStyles from '../features/ui/checkbox.module.css'
+import { Checkbox } from '../features/ui/Checkbox'
 import { describeElement, ELEMENT_TYPE_LABELS } from '../lib/display'
 import { TODAY_KIND_LABELS, type TodayRow } from './todayRows'
 import styles from './TodayWindow.module.css'
@@ -42,9 +42,7 @@ export function TodayList({ rows, error }: Props): React.JSX.Element {
         {rows.map((row) => (
           <li key={row.blockId} className={styles.row}>
             <div className={row.completed ? `${styles.line} ${styles.done}` : styles.line}>
-              <input
-                type="checkbox"
-                className={checkboxStyles.checkbox}
+              <Checkbox
                 checked={row.completed}
                 disabled={check.isPending}
                 aria-label={row.completed ? '완료 취소' : '완료'}

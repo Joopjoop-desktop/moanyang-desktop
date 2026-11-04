@@ -6,11 +6,13 @@
  *   tokens.css 리셋에 기대고 있어서다. 모두 옮긴 뒤 켠다.
  * - Tailwind는 layer 안에 있고 *.module.css는 layer 밖이라, 한 요소에 둘을 섞으면
  *   모듈 쪽이 이긴다. 컴포넌트 하나는 한 번에 다 옮긴다.
+ * - layer 밖 CSS(*.module.css, main.css, overlay.css)는 우선순위와 상관없이 Tailwind를 이긴다.
+ *   그래서 tokens.css의 전역 리셋은 @layer base에 둔다. 새 전역 규칙도 layer 밖에 두지 않는다.
  * - 값은 tokens.css의 :root 변수가 정한다. 아래 @theme는 그 변수를 Tailwind 이름에 잇기만 한다.
  * - 크기는 rem으로 쓴다(87.5% 스케일이 root 글자 크기를 따른다). 창 크기 상수와 맞춘
  *   px(windows.ts)만 h-[52px]처럼 px 임의값으로 둔다.
  */
-@layer theme, base, components, utilities;
+@layer properties, theme, base, components, utilities;
 
 @import 'tailwindcss/theme.css' layer(theme);
 /* 클래스는 렌더러 코드(src/renderer/src)에서만 찾는다 */

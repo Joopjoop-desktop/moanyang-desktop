@@ -1,3 +1,6 @@
+/* layer 순서는 tailwind.css와 같게 둔다. 이 파일이 먼저 불려서 여기서 순서가 정해진다. */
+@layer properties, theme, base, components, utilities;
+
 /*
  * 디자인 값은 여기 CSS 변수로만 정한다. 각 화면의 *.module.css는 이 변수를 쓴다. (설계 9.6)
  * 스튜디오(main.css)와 오늘 창(overlay.css)이 함께 쓴다.
@@ -54,51 +57,57 @@
     sans-serif;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-}
+/*
+ * 아래 리셋은 @layer base에 둔다. layer 밖에 두면 * { margin: 0 } 같은 규칙이 Tailwind 유틸리티(-m-0.25 등)를
+ * 우선순위와 상관없이 이겨 버린다. 모듈 CSS는 layer 밖이라 지금처럼 이 리셋을 이긴다.
+ */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+  }
 
-html,
-body,
-#root {
-  height: 100%;
-}
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
 
-body {
-  font-family: var(--font-family);
-  font-size: 0.875rem;
-  color: var(--color-text);
-}
+  body {
+    font-family: var(--font-family);
+    font-size: 0.875rem;
+    color: var(--color-text);
+  }
 
-/* 버튼·입력칸은 글꼴을 따로 정하지 않으면 시스템 글꼴로 돌아간다 */
-button,
-input,
-select,
-textarea {
-  font-family: inherit;
-}
+  /* 버튼·입력칸은 글꼴을 따로 정하지 않으면 시스템 글꼴로 돌아간다 */
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
 
-/* 스크롤바: 얇고 연하게 (두 창 공통) */
-::-webkit-scrollbar {
-  width: 0.625rem;
-  height: 0.625rem;
-}
+  /* 스크롤바: 얇고 연하게 (두 창 공통) */
+  ::-webkit-scrollbar {
+    width: 0.625rem;
+    height: 0.625rem;
+  }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
-::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
-  border-radius: 62.4375rem;
-  background: var(--gray-50);
-  background-clip: content-box;
-}
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 62.4375rem;
+    background: var(--gray-50);
+    background-clip: content-box;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-60);
-  background-clip: content-box;
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-60);
+    background-clip: content-box;
+  }
 }

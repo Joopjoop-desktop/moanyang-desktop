@@ -2,7 +2,7 @@ import { useMutation, type UseMutationResult } from '@tanstack/react-query'
 import type { BlockView } from '@shared/views'
 import { messageForError } from '../../api/errorMessages'
 import { useToast } from '../toast/toastContext'
-import checkboxStyles from '../ui/checkbox.module.css'
+import { Checkbox } from '../ui/Checkbox'
 import { actionsFor, BLOCK_ACTIONS, runBlockAction, type BlockAction } from './blockActionRules'
 import styles from './BlockActionBar.module.css'
 
@@ -74,9 +74,7 @@ export function CompleteCheckbox({
   const completed = block.completedAt !== null
 
   return (
-    <input
-      type="checkbox"
-      className={checkboxStyles.checkbox}
+    <Checkbox
       checked={completed}
       disabled={mutation.isPending}
       aria-label={completed ? '완료 취소' : '완료'}
