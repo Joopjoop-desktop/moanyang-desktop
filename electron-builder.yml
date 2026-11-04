@@ -11,9 +11,21 @@ files:
   - '!data/**'
   - '!drizzle/**'
   - '!{electron.vite,vitest,drizzle}.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,.editorconfig,.nvmrc,CHANGELOG.md,README.md,CLAUDE.md}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,.editorconfig,.nvmrc,CHANGELOG.md,README.md,CONTRIBUTING.md,CLAUDE.md}'
+  - '!.claude/**'
   - '!{.env,.env.*,.npmrc}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  # 실행에 안 쓰는 의존성 파일: 소스맵, 타입 선언, better-sqlite3의 C 소스(sqlite3.c 등)
+  - '!**/node_modules/**/*.{map,d.ts,d.cts,d.mts}'
+  - '!**/node_modules/better-sqlite3/{deps,src}/**'
+  # better-sqlite3는 실행 중인 OS·CPU의 prebuild만 불러오므로(lib/binding.js) 빌드 대상 것만 남긴다.
+  # 플랫폼별(win/mac) files는 이 목록을 덮어쓰므로 쓰지 않는다.
+  - '!**/node_modules/better-sqlite3/prebuilds/!(${platform}-${arch}).node'
+# Chromium 언어 파일은 한국어·영어만 (en-US는 Windows의 기본값, en은 맥의 en.lproj)
+electronLanguages:
+  - ko
+  - en
+  - en-US
 # 마이그레이션 SQL은 asar 밖 resources/drizzle/에 둔다 (설계 3.1)
 extraResources:
   - from: drizzle

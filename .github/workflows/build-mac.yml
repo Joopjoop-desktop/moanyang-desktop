@@ -30,6 +30,21 @@ jobs:
       # --publish never: CI에서 electron-builder가 GitHub 릴리스로 올리려 하지 않게 한다
       - run: npm run build:mac -- --publish never
 
+      # 패키징된 앱 안의 Electron으로 better-sqlite3를 불러와 DB를 열어 본다.
+      # electron-builder.yml에서 다른 OS용 prebuild를 빼므로, 맥용이 제대로 들어갔는지 여기서 확인한다.
+      - name: Check packaged app
+        env:
+          APP: dist/mac-arm64/Joopjoop.app
+        run: |
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/Joopjoop" -e "
+            const Database = require(process.argv[1])
+            const db = new Database(':memory:')
+            console.log('sqlite', db.prepare('select sqlite_version() v').get().v)
+          " "$PWD/$APP/Contents/Resources/app.asar.unpacked/node_modules/better-sqlite3"
+          ls "$APP/Contents/Resources/app.asar.unpacked/node_modules/better-sqlite3/prebuilds"
+          find "$APP" -name '*.lproj' -maxdepth 6
+          du -sh "$APP" dist/*.dmg
+
       - uses: actions/upload-artifact@v4
         with:
           name: joopjoop-mac-arm64
