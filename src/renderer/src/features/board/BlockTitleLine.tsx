@@ -1,7 +1,13 @@
 import type { BlockView } from '@shared/views'
+import clsx from 'clsx'
 import { formatTimestamp } from '../../lib/display'
-import { blockTitle, missingChips } from '../fill/fillRules'
-import styles from './BlockTitleLine.module.css'
+import { blockTitle, missingChips, type MissingTone } from '../fill/fillRules'
+
+/** 빠진 것 칩 (Figma Chips): 날짜는 빨강, 할 일은 파랑 */
+const chipTone: Record<MissingTone, string> = {
+  date: 'bg-warn-soft text-warn',
+  task: 'bg-accent-soft text-accent'
+}
 
 type Props = {
   block: BlockView
@@ -23,16 +29,24 @@ export function BlockTitleLine({
   const chips = showMissing ? missingChips(block) : []
 
   return (
-    <div className={styles.text}>
-      <div className={styles.titleRow}>
-        <span className={styles.title}>{blockTitle(block)}</span>
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="max-w-[13.9375rem] min-w-0 truncate text-lg/6 font-semibold text-gray-90">
+          {blockTitle(block)}
+        </span>
         {chips.map((chip) => (
-          <span key={chip.label} className={`${styles.chip} ${styles[chip.tone]}`}>
+          <span
+            key={chip.label}
+            className={clsx(
+              'shrink-0 rounded-pill px-2 text-xs/6 font-medium whitespace-nowrap',
+              chipTone[chip.tone]
+            )}
+          >
             {chip.label}
           </span>
         ))}
       </div>
-      <span className={open ? `${styles.meta} ${styles.metaOpen}` : styles.meta}>
+      <span className={clsx('text-xs/6', open ? 'text-gray-70' : 'text-gray-50')}>
         {blockMetaText(block)}
       </span>
     </div>

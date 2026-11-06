@@ -9,8 +9,7 @@ import { unwrap } from '../../api/client'
 import { messageForError } from '../../api/errorMessages'
 import { ELEMENT_TYPE_LABELS } from '../../lib/display'
 import { emptyDraft, toCreate, type ElementDraft } from '../../lib/elementEdit'
-import styles from './ElementAdder.module.css'
-import editorStyles from './ElementEditor.module.css'
+import { editorClasses } from './elementEditorClasses'
 
 type State =
   | { step: 'closed' }
@@ -42,7 +41,11 @@ export function ElementAdder({ block }: { block: BlockView }): React.JSX.Element
 
   if (state.step === 'closed') {
     return (
-      <button type="button" className={styles.add} onClick={() => setState({ step: 'menu' })}>
+      <button
+        type="button"
+        className="inherit-font inline-flex cursor-pointer items-center justify-center rounded-pill border border-border bg-surface px-2 py-0 text-sm/[1.375rem] font-medium text-muted hover:bg-hover [&_img]:size-5"
+        onClick={() => setState({ step: 'menu' })}
+      >
         추가
         <img src={plusIcon} alt="" />
       </button>
@@ -51,18 +54,26 @@ export function ElementAdder({ block }: { block: BlockView }): React.JSX.Element
 
   if (state.step === 'menu') {
     return (
-      <div className={styles.menu} onKeyDown={(e) => e.key === 'Escape' && close()}>
+      <div
+        className="flex flex-wrap items-center gap-1"
+        onKeyDown={(e) => e.key === 'Escape' && close()}
+      >
         {block.addable.map((type) => (
           <button
             key={type}
             type="button"
-            className={styles.choice}
+            className="inherit-font inline-flex cursor-pointer items-center justify-center rounded-pill border border-border bg-surface px-2 py-0 text-sm/[1.375rem] font-medium text-muted hover:bg-hover"
             onClick={() => setState({ step: 'editing', type, draft: emptyDraft(type) })}
           >
             {ELEMENT_TYPE_LABELS[type]}
           </button>
         ))}
-        <button type="button" className={styles.cancel} aria-label="취소" onClick={close}>
+        <button
+          type="button"
+          className="flex cursor-pointer border-none bg-transparent p-0 [&_img]:size-5"
+          aria-label="취소"
+          onClick={close}
+        >
           <img src={closeIcon} alt="" />
         </button>
       </div>
@@ -89,28 +100,28 @@ export function ElementAdder({ block }: { block: BlockView }): React.JSX.Element
   }
 
   return (
-    <div className={styles.editing} onKeyDown={onKeyDown}>
-      <span className={styles.type}>{ELEMENT_TYPE_LABELS[type]}</span>
-      <div className={editorStyles.editor}>
+    <div className="flex w-full gap-2" onKeyDown={onKeyDown}>
+      <span className="w-11 shrink-0 pt-1 text-[1rem] text-muted">{ELEMENT_TYPE_LABELS[type]}</span>
+      <div className={editorClasses.editor}>
         {draft.kind === 'date' ? (
-          <div className={editorStyles.dateRow}>
+          <div className={editorClasses.dateRow}>
             <input
               type="date"
-              className={editorStyles.input}
+              className={editorClasses.input}
               value={draft.dateValue}
               autoFocus
               onChange={(e) => setDraft({ ...draft, dateValue: e.target.value })}
             />
             <input
               type="time"
-              className={editorStyles.input}
+              className={editorClasses.input}
               value={draft.timeValue}
               onChange={(e) => setDraft({ ...draft, timeValue: e.target.value })}
             />
           </div>
         ) : type === 'detail' || type === 'memo' ? (
           <textarea
-            className={editorStyles.input}
+            className={editorClasses.input}
             rows={3}
             value={draft.value}
             autoFocus
@@ -118,23 +129,23 @@ export function ElementAdder({ block }: { block: BlockView }): React.JSX.Element
           />
         ) : (
           <input
-            className={editorStyles.input}
+            className={editorClasses.input}
             value={draft.value}
             autoFocus
             onChange={(e) => setDraft({ kind: 'text', value: e.target.value })}
           />
         )}
-        {error && <p className={editorStyles.error}>{error}</p>}
-        <div className={editorStyles.buttons}>
+        {error && <p className={editorClasses.error}>{error}</p>}
+        <div className={editorClasses.buttons}>
           <button
             type="button"
-            className={editorStyles.primary}
+            className={editorClasses.primary}
             disabled={mutation.isPending}
             onClick={save}
           >
             추가
           </button>
-          <button type="button" className={editorStyles.secondary} onClick={close}>
+          <button type="button" className={editorClasses.secondary} onClick={close}>
             취소
           </button>
         </div>

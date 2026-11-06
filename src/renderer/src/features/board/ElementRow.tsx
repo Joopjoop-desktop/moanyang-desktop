@@ -2,6 +2,7 @@ import { useDndContext } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useMutation } from '@tanstack/react-query'
+import clsx from 'clsx'
 import { useState } from 'react'
 import type { ElementView } from '@shared/views'
 import { unwrap } from '../../api/client'
@@ -10,7 +11,6 @@ import { describeElement, ELEMENT_TYPE_LABELS } from '../../lib/display'
 import { useToast } from '../toast/toastContext'
 import type { DragData, ElementDnd } from './dnd/dropRules'
 import { ElementEditor } from './ElementEditor'
-import styles from './ElementRow.module.css'
 
 type Props = {
   element: ElementView
@@ -78,12 +78,14 @@ export function ElementRow({
     onError
   })
 
-  const classNames = [
-    styles.row,
-    editable && draggable && !editing ? styles.draggable : '',
-    isDragging ? styles.dragging : '',
-    insertBefore ? styles.insertBefore : ''
-  ].join(' ')
+  const classNames = clsx(
+    'group/row flex w-full items-baseline gap-2 border-t-2',
+    // 다른 블록의 요소가 이 줄 앞에 끼워질 자리
+    insertBefore ? 'border-t-accent' : 'border-t-transparent',
+    editable && draggable && !editing && 'cursor-grab touch-none',
+    // 끌고 있는 요소의 원래 자리
+    isDragging && 'opacity-40'
+  )
 
   return (
     <li
@@ -92,27 +94,31 @@ export function ElementRow({
       style={{ transform: CSS.Translate.toString(transform), transition }}
       {...listeners}
     >
-      <span className={styles.type}>{ELEMENT_TYPE_LABELS[element.type]}</span>
+      <span className="w-11 shrink-0 text-base/[1.375rem] text-muted">
+        {ELEMENT_TYPE_LABELS[element.type]}
+      </span>
       {editing ? (
         <ElementEditor element={element} onClose={() => setEditing(false)} />
       ) : (
-        <div className={styles.body}>
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-1.5">
           <button
             type="button"
-            className={element.type === 'task' ? `${styles.value} ${styles.task}` : styles.value}
+            className="inherit-font cursor-text rounded-[0.125rem] border-none bg-transparent p-0 text-left text-lg/[1.375rem] font-medium [word-break:break-word] whitespace-pre-wrap text-text enabled:hover:bg-hover disabled:cursor-default"
             disabled={!editable}
             onClick={() => setEditing(true)}
           >
             {display.primary}
           </button>
-          {display.secondary && <span className={styles.raw}>{display.secondary}</span>}
+          {display.secondary && (
+            <span className="text-[0.75rem] text-muted">{display.secondary}</span>
+          )}
           {display.needsConfirm && (
-            <span className={styles.confirm}>
+            <span className="inline-flex items-center gap-1 rounded-pill bg-warn-soft px-2 text-xs/5 text-warn">
               확인 필요
               {editable && (
                 <button
                   type="button"
-                  className={styles.confirmButton}
+                  className="inherit-font cursor-pointer rounded-pill border border-warn bg-surface px-1 py-0 text-warn"
                   disabled={confirm.isPending}
                   onClick={() => confirm.mutate()}
                 >
@@ -124,7 +130,7 @@ export function ElementRow({
           {editable && (
             <button
               type="button"
-              className={styles.delete}
+              className="inherit-font invisible ml-auto cursor-pointer border-none bg-transparent px-1 py-0 text-[1.125rem] text-gray-50 group-hover/row:visible hover:text-warn"
               aria-label={`${ELEMENT_TYPE_LABELS[element.type]} 삭제`}
               disabled={remove.isPending}
               onClick={() => remove.mutate()}

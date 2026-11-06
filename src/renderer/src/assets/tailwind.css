@@ -74,3 +74,20 @@
 @utility app-no-drag {
   -webkit-app-region: no-drag;
 }
+
+/*
+ * hover:는 v4 기본값이 @media (hover: hover) 안에서만 켜진다. 모듈 CSS의 :hover와 똑같이
+ * 동작하도록 그냥 :hover로 둔다. (group-hover:도 이것을 따른다)
+ */
+@custom-variant hover (&:hover);
+
+/*
+ * font: inherit (버튼·입력칸이 시스템 글꼴 크기로 돌아가지 않게).
+ * 단축 속성이라 utilities에 두면 text-*·font-*·leading-*보다 뒤에 나와 덮어쓴다.
+ * 그래서 그보다 아래인 components layer에 둔다.
+ */
+@layer components {
+  .inherit-font {
+    font: inherit;
+  }
+}

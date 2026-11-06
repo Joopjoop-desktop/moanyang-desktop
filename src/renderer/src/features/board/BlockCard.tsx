@@ -1,10 +1,10 @@
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { BlockView } from '@shared/views'
+import clsx from 'clsx'
 import { BlockActionBar, CompleteCheckbox } from './BlockActionBar'
 import type { BlockAction } from './blockActionRules'
 import { BlockTitleLine } from './BlockTitleLine'
-import styles from './BlockCard.module.css'
 import type { DragData, DropData } from './dnd/dropRules'
 import { ElementRow } from './ElementRow'
 import { LabelPicker } from './LabelPicker'
@@ -61,20 +61,24 @@ export function BlockCard({
     setDropRef(node)
     setDragRef(node)
   }
-  const classNames = [
-    embedded ? styles.embedded : styles.card,
-    targeted ? styles.target : '',
-    isDragging ? styles.dragging : ''
-  ].join(' ')
+  const classNames = clsx(
+    'flex flex-col',
+    // 목록에서는 한 줄 항목(li)이 카드 모양을 그린다
+    !embedded && 'rounded-lg bg-surface shadow-panel',
+    // 다른 블록의 요소·블록을 이 카드에 놓으려 할 때
+    targeted && 'outline-2 -outline-offset-2 outline-accent',
+    // 끌고 있는 블록 원래 자리
+    isDragging && 'opacity-40'
+  )
 
   return (
     <article ref={setRefs} className={classNames}>
       {!embedded && (
-        <header className={styles.header}>
+        <header className="flex items-start gap-4 p-3 [&>input]:mt-0.25">
           {dndEnabled && handle && (
             <button
               type="button"
-              className={styles.handle}
+              className="inherit-font cursor-grab touch-none border-none bg-transparent px-0.5 py-0 leading-6 text-muted hover:text-text"
               aria-label="블록 끌기"
               {...listeners}
               {...attributes}
@@ -87,14 +91,14 @@ export function BlockCard({
         </header>
       )}
 
-      <div className={styles.body}>
+      <div className="flex flex-col items-start gap-3 px-12.5 py-2">
         <LabelPicker block={block} />
 
         <SortableContext
           items={block.elements.map((element) => element.id)}
           strategy={verticalListSortingStrategy}
         >
-          <ul className={styles.elements}>
+          <ul className="flex w-full list-none flex-col gap-3 p-0">
             {block.elements.map((element, index) => (
               <ElementRow
                 key={element.id}
@@ -112,7 +116,7 @@ export function BlockCard({
         {editable && <ElementAdder block={block} />}
       </div>
 
-      <footer className={styles.footer}>
+      <footer className="mx-[0.8125rem] mt-1 mb-3 border-t border-border pt-3">
         <BlockActionBar block={block} onDone={onAction} />
       </footer>
     </article>

@@ -5,7 +5,7 @@ import type { ElementView } from '@shared/views'
 import { unwrap } from '../../api/client'
 import { messageForError } from '../../api/errorMessages'
 import { draftFrom, toUpdate, type ElementDraft } from '../../lib/elementEdit'
-import styles from './ElementEditor.module.css'
+import { editorClasses } from './elementEditorClasses'
 
 type Props = {
   element: ElementView
@@ -42,26 +42,26 @@ export function ElementEditor({ element, onClose }: Props): React.JSX.Element {
   }
 
   return (
-    <div className={styles.editor} onKeyDown={onKeyDown}>
+    <div className={editorClasses.editor} onKeyDown={onKeyDown}>
       {draft.kind === 'date' ? (
-        <div className={styles.dateRow}>
+        <div className={editorClasses.dateRow}>
           <input
             type="date"
-            className={styles.input}
+            className={editorClasses.input}
             value={draft.dateValue}
             autoFocus
             onChange={(e) => setDraft({ ...draft, dateValue: e.target.value })}
           />
           <input
             type="time"
-            className={styles.input}
+            className={editorClasses.input}
             value={draft.timeValue}
             onChange={(e) => setDraft({ ...draft, timeValue: e.target.value })}
           />
         </div>
       ) : element.type === 'detail' || element.type === 'memo' ? (
         <textarea
-          className={styles.input}
+          className={editorClasses.input}
           rows={3}
           value={draft.value}
           autoFocus
@@ -69,23 +69,23 @@ export function ElementEditor({ element, onClose }: Props): React.JSX.Element {
         />
       ) : (
         <input
-          className={styles.input}
+          className={editorClasses.input}
           value={draft.value}
           autoFocus
           onChange={(e) => setDraft({ kind: 'text', value: e.target.value })}
         />
       )}
-      {error && <p className={styles.error}>{error}</p>}
-      <div className={styles.buttons}>
+      {error && <p className={editorClasses.error}>{error}</p>}
+      <div className={editorClasses.buttons}>
         <button
           type="button"
-          className={styles.primary}
+          className={editorClasses.primary}
           disabled={mutation.isPending}
           onClick={save}
         >
           저장
         </button>
-        <button type="button" className={styles.secondary} onClick={onClose}>
+        <button type="button" className={editorClasses.secondary} onClick={onClose}>
           취소
         </button>
       </div>
