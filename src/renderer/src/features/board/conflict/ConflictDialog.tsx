@@ -7,7 +7,6 @@ import { describeElement, ELEMENT_TYPE_LABELS } from '../../../lib/display'
 import { useToast } from '../../toast/toastContext'
 import type { MoveIntent } from '../dnd/dropRules'
 import { confirmSelection } from './confirmSelection'
-import styles from './ConflictDialog.module.css'
 import { canConfirm, defaultSelection, isSelected, toggle } from './selection'
 
 export type PendingConflict = { intent: MoveIntent; preview: ConflictPreview }
@@ -43,9 +42,9 @@ export function ConflictDialog({ intent, preview: initial, onClose }: Props): Re
   const title = intent.kind === 'merge' ? '블록 합치기' : '요소 옮기기'
 
   return (
-    <div className={styles.backdrop}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center rounded-window bg-[rgba(0,0,0,0.3)]">
       <div
-        className={styles.dialog}
+        className="flex max-h-[calc(100%-4rem)] w-[min(27.5rem,calc(100%-2rem))] flex-col gap-3 overflow-y-auto rounded-lg bg-surface px-6 py-5 shadow-[0_12px_32px_rgba(0,0,0,0.2)] focus:outline-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby="conflict-title"
@@ -56,20 +55,31 @@ export function ConflictDialog({ intent, preview: initial, onClose }: Props): Re
           if (event.key === 'Escape' && !mutation.isPending) onClose()
         }}
       >
-        <h2 id="conflict-title" className={styles.title}>
+        <h2 id="conflict-title" className="text-[1rem]">
           {title}: 겹치는 요소를 골라 주세요
         </h2>
-        <p className={styles.description}>남길 것을 체크하세요. 종류마다 하나 이상 남겨야 해요.</p>
-        {refreshed && <p className={styles.notice}>내용이 바뀌어서 다시 확인해 주세요.</p>}
+        <p className="text-[0.8125rem] text-muted">
+          남길 것을 체크하세요. 종류마다 하나 이상 남겨야 해요.
+        </p>
+        {refreshed && (
+          <p className="rounded bg-warn-soft px-2.5 py-1.5 text-[0.8125rem] text-warn">
+            내용이 바뀌어서 다시 확인해 주세요.
+          </p>
+        )}
         {preview.autoDiscardedIds.length > 0 && (
-          <p className={styles.description}>
+          <p className="text-[0.8125rem] text-muted">
             값이 같은 요소 {preview.autoDiscardedIds.length}개는 하나로 정리돼요.
           </p>
         )}
 
         {preview.groups.map((group) => (
-          <fieldset key={group.type} className={styles.group}>
-            <legend className={styles.legend}>{ELEMENT_TYPE_LABELS[group.type]}</legend>
+          <fieldset
+            key={group.type}
+            className="flex flex-col gap-1.5 rounded border border-border px-3 py-2.5"
+          >
+            <legend className="px-1 text-[0.75rem] font-semibold">
+              {ELEMENT_TYPE_LABELS[group.type]}
+            </legend>
             {group.existing.map((element) => (
               <Choice
                 key={element.id}
@@ -91,10 +101,10 @@ export function ConflictDialog({ intent, preview: initial, onClose }: Props): Re
           </fieldset>
         ))}
 
-        <div className={styles.buttons}>
+        <div className="flex justify-end gap-2">
           <button
             type="button"
-            className={styles.secondary}
+            className="inherit-font cursor-pointer rounded border border-border bg-surface px-3.5 py-1.5 text-text"
             disabled={mutation.isPending}
             onClick={onClose}
           >
@@ -102,7 +112,7 @@ export function ConflictDialog({ intent, preview: initial, onClose }: Props): Re
           </button>
           <button
             type="button"
-            className={styles.primary}
+            className="inherit-font cursor-pointer rounded border border-primary bg-primary px-3.5 py-1.5 text-primary-text disabled:cursor-default disabled:opacity-40"
             disabled={mutation.isPending || !canConfirm(preview, selection)}
             onClick={() => mutation.mutate()}
           >
@@ -125,11 +135,11 @@ function Choice({ element, origin, checked, onToggle }: ChoiceProps): React.JSX.
   const display = describeElement(element, new Date().getFullYear())
 
   return (
-    <label className={styles.choice}>
+    <label className="flex cursor-pointer items-baseline gap-2">
       <input type="checkbox" checked={checked} onChange={onToggle} />
-      <span className={styles.value}>{display.primary}</span>
-      {display.secondary && <span className={styles.raw}>{display.secondary}</span>}
-      <span className={styles.origin}>{origin}</span>
+      <span className="[word-break:break-word]">{display.primary}</span>
+      {display.secondary && <span className="text-[0.75rem] text-muted">{display.secondary}</span>}
+      <span className="ml-auto shrink-0 text-[0.6875rem] text-muted">{origin}</span>
     </label>
   )
 }

@@ -1,10 +1,10 @@
 import { useMutation, type UseMutationResult } from '@tanstack/react-query'
 import type { BlockView } from '@shared/views'
+import clsx from 'clsx'
 import { messageForError } from '../../api/errorMessages'
 import { useToast } from '../toast/toastContext'
 import { Checkbox } from '../ui/Checkbox'
 import { actionsFor, BLOCK_ACTIONS, runBlockAction, type BlockAction } from './blockActionRules'
-import styles from './BlockActionBar.module.css'
 
 type OnDone = (action: BlockAction) => void
 
@@ -43,12 +43,19 @@ export function BlockActionBar({
   const mutation = useBlockAction(block, onDone)
 
   return (
-    <div className={styles.bar}>
+    <div className="flex flex-wrap justify-end gap-2">
       {actionsFor(block).map((action) => (
         <button
           key={action}
           type="button"
-          className={action === 'delete' ? `${styles.button} ${styles.danger}` : styles.button}
+          className={clsx(
+            // 작은 버튼 (Figma Btn_Small)
+            'inherit-font cursor-pointer rounded border px-2 py-1 text-sm/[1.375rem] font-medium disabled:cursor-default disabled:opacity-50',
+            action === 'delete'
+              ? // 삭제하기: 검은 바탕 흰 글자
+                'border-primary bg-primary text-primary-text enabled:hover:bg-gray-100'
+              : 'border-border bg-surface text-text enabled:hover:bg-hover'
+          )}
           disabled={mutation.isPending}
           onClick={() => mutation.mutate(action)}
         >
