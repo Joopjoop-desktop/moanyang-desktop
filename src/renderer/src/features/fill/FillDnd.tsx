@@ -18,7 +18,6 @@ import { performDrop } from '../board/dnd/dropActions'
 import { resolveDrop, type DragData, type DropData } from '../board/dnd/dropRules'
 import { useToast } from '../toast/toastContext'
 import { blockTitle } from './fillRules'
-import styles from './FillList.module.css'
 
 type Props = {
   /** 한 줄 항목을 달력 칸에 놓았을 때 (날짜 넣기 창, 설계 9.6) */
@@ -76,7 +75,11 @@ export function FillDnd({ onDropToDay, children }: Props): React.JSX.Element {
     >
       {children}
       <DragOverlay dropAnimation={null}>
-        {dragging && <div className={styles.overlay}>{previewText(dragging, allBlocks)}</div>}
+        {dragging && (
+          <div className="max-w-[16.25rem] cursor-grabbing truncate rounded border border-accent bg-surface px-2.5 py-1.5 shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
+            {previewText(dragging, allBlocks)}
+          </div>
+        )}
       </DragOverlay>
       {conflict && <ConflictDialog {...conflict} onClose={() => setConflict(null)} />}
     </DndContext>
