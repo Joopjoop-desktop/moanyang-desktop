@@ -1,15 +1,18 @@
-/* 오늘 창은 배경이 투명해야 둥근 판만 떠 보이고 투명도를 줄 수 있다 (창도 transparent: true) */
-/*
- * 오늘 창은 폭이 고정(코어 TODAY_WIDTH)이라 글자 크기도 고정이다. 크기 값이 rem이라 여기가 기준이 된다.
- * 16px이면 Figma 크기 그대로이고, 14px이면 87.5%다. 바꾸면 코어의 TODAY_WIDTH·TODAY_COLLAPSED_HEIGHT도 같은 비율로.
- */
-html {
-  font-size: 14px;
-}
+/* 오늘 창 전역 규칙. layer 밖에 두면 Tailwind 유틸리티를 이기므로 base에 둔다 (tailwind.css 참고) */
+@layer base {
+  /*
+   * 오늘 창은 폭이 고정(코어 TODAY_WIDTH)이라 글자 크기도 고정이다. 크기 값이 rem이라 여기가 기준이 된다.
+   * 16px이면 Figma 크기 그대로이고, 14px이면 87.5%다. 바꾸면 코어의 TODAY_WIDTH·TODAY_COLLAPSED_HEIGHT도 같은 비율로.
+   */
+  html {
+    font-size: 14px;
+  }
 
-html,
-body {
-  background: transparent;
-  overflow: hidden;
-  user-select: none;
+  /* 오늘 창은 배경이 투명해야 둥근 판만 떠 보이고 투명도를 줄 수 있다 (창도 transparent: true) */
+  html,
+  body {
+    background: transparent;
+    overflow: hidden;
+    user-select: none;
+  }
 }

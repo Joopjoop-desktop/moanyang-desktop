@@ -850,7 +850,7 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; 
 ```
 
 - 페이지 이동 라이브러리(router) 없이 상태값으로 오른쪽 패널 내용을 바꾼다.
-- 스타일은 CSS 변수(tokens.css) + Tailwind CSS v4. CSS Modules에서 컴포넌트별로 옮기는 중이며, 진입점과 규칙은 `src/renderer/src/assets/tailwind.css`에 있다. UI 라이브러리는 쓰지 않는다.
+- 스타일은 CSS 변수(tokens.css) + Tailwind CSS v4. 진입점과 규칙(layer 순서, 토큰 연결)은 `src/renderer/src/assets/tailwind.css`에 있다. UI 라이브러리는 쓰지 않는다.
 - **위: 먹이 칸.** 붙여넣기 입력창(`method: 'paste'`), 그 아래 실패 카드. "다시 시도"는 `canRetry`일 때만, "닫기"는 항상.
 - **가운데: 캘린더**(7.5). 완료한 블록은 흐리게 남는다.
 - **오른쪽: 목록 패널.** 항상 열려 있고 두 묶음을 보여준다(7.6, `block:list`의 `needsInput`, `undated`).
