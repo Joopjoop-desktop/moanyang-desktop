@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { unwrap } from '../api/client'
@@ -9,7 +10,6 @@ import { runBlockAction } from '../features/board/blockActionRules'
 import { Checkbox } from '../features/ui/Checkbox'
 import { describeElement, ELEMENT_TYPE_LABELS } from '../lib/display'
 import { TODAY_KIND_LABELS, type TodayRow } from './todayRows'
-import styles from './TodayWindow.module.css'
 
 type Props = {
   rows: TodayRow[] | undefined
@@ -31,17 +31,21 @@ export function TodayList({ rows, error }: Props): React.JSX.Element {
     onError: (e) => setProblem(messageForError(e))
   })
 
-  if (error) return <p className={styles.message}>{messageForError(error)}</p>
-  if (!rows) return <p className={styles.message}>불러오는 중…</p>
-  if (rows.length === 0) return <p className={styles.message}>오늘은 할 일이 없어요.</p>
+  if (error) return <p className="p-3 text-[0.875rem] text-muted">{messageForError(error)}</p>
+  if (!rows) return <p className="p-3 text-[0.875rem] text-muted">불러오는 중…</p>
+  if (rows.length === 0)
+    return <p className="p-3 text-[0.875rem] text-muted">오늘은 할 일이 없어요.</p>
 
   return (
     <>
-      {problem && <p className={styles.problem}>{problem}</p>}
-      <ul className={styles.rows}>
+      {problem && <p className="px-3 pt-3 pb-0 text-[0.875rem] text-warn">{problem}</p>}
+      <ul className="flex list-none flex-col gap-3 p-0">
         {rows.map((row) => (
-          <li key={row.blockId} className={styles.row}>
-            <div className={row.completed ? `${styles.line} ${styles.done}` : styles.line}>
+          <li
+            key={row.blockId}
+            className="overflow-hidden rounded-lg bg-surface shadow-[0_0_10px_2px_rgba(42,42,42,0.1)]"
+          >
+            <div className="flex items-center gap-3 p-3">
               <Checkbox
                 checked={row.completed}
                 disabled={check.isPending}
@@ -50,15 +54,33 @@ export function TodayList({ rows, error }: Props): React.JSX.Element {
               />
               <button
                 type="button"
-                className={styles.toggle}
+                className="inherit-font flex min-w-0 flex-1 cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-lg/[1.375rem] text-text"
                 aria-expanded={openId === row.blockId}
                 onClick={() => setOpenId(openId === row.blockId ? null : row.blockId)}
               >
-                <span className={styles.title}>{row.title}</span>
-                {row.time && <span className={styles.time}>{row.time}</span>}
-                <span className={styles.kind}>{TODAY_KIND_LABELS[row.kind]}</span>
+                <span
+                  className={clsx(
+                    'min-w-0 truncate font-semibold',
+                    row.completed ? 'text-gray-50 line-through' : 'text-gray-90'
+                  )}
+                >
+                  {row.title}
+                </span>
+                {row.time && (
+                  <span
+                    className={clsx(
+                      'shrink-0 font-medium',
+                      row.completed ? 'text-gray-50 line-through' : 'text-muted'
+                    )}
+                  >
+                    {row.time}
+                  </span>
+                )}
+                <span className="shrink-0 text-[0.75rem] text-gray-50">
+                  {TODAY_KIND_LABELS[row.kind]}
+                </span>
                 <img
-                  className={styles.arrow}
+                  className="ml-auto size-5 shrink-0"
                   src={openId === row.blockId ? chevronUp : chevronDown}
                   alt=""
                 />
@@ -78,8 +100,9 @@ export function TodayList({ rows, error }: Props): React.JSX.Element {
  */
 function RowDetail({ blockId }: { blockId: string }): React.JSX.Element {
   const { data, error } = useBlock(blockId)
-  if (error) return <p className={styles.detailMessage}>{messageForError(error)}</p>
-  if (!data) return <p className={styles.detailMessage}>불러오는 중…</p>
+  if (error)
+    return <p className="px-12 pt-0 pb-4 text-[0.875rem] text-muted">{messageForError(error)}</p>
+  if (!data) return <p className="px-12 pt-0 pb-4 text-[0.875rem] text-muted">불러오는 중…</p>
 
   const currentYear = new Date().getFullYear()
   const details = data.elements.filter((element) => element.type !== 'task')
@@ -90,20 +113,28 @@ function RowDetail({ blockId }: { blockId: string }): React.JSX.Element {
   }
 
   return (
-    <div className={styles.detail}>
+    <div className="flex flex-col gap-2 px-12 pt-0 pb-4 text-base/[1.375rem]">
       {details.length === 0 ? (
-        <p className={styles.detailEmpty}>더 적힌 내용이 없어요.</p>
+        <p className="text-muted">더 적힌 내용이 없어요.</p>
       ) : (
-        <dl className={styles.detailList}>
+        <dl className="flex flex-col gap-2">
           {details.map((element) => (
-            <div key={element.id} className={styles.detailRow}>
-              <dt>{ELEMENT_TYPE_LABELS[element.type]}</dt>
-              <dd>{describeElement(element, currentYear).primary}</dd>
+            <div key={element.id} className="flex gap-2">
+              <dt className="w-[2.9375rem] shrink-0 text-muted">
+                {ELEMENT_TYPE_LABELS[element.type]}
+              </dt>
+              <dd className="min-w-0 font-medium wrap-anywhere text-text">
+                {describeElement(element, currentYear).primary}
+              </dd>
             </div>
           ))}
         </dl>
       )}
-      <button type="button" className={styles.openStudio} onClick={openInStudio}>
+      <button
+        type="button"
+        className="inherit-font cursor-pointer self-start border-none bg-transparent px-0 py-0.5 text-[0.875rem] text-accent hover:underline"
+        onClick={openInStudio}
+      >
         스튜디오에서 열기 →
       </button>
     </div>

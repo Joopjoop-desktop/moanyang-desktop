@@ -1,10 +1,17 @@
+import clsx from 'clsx'
 import { useState } from 'react'
 import { unwrap } from '../api/client'
 import { useBlockList } from '../api/queries'
-import styles from './Drawer.module.css'
-import { drawerText } from './drawerStatus'
+import { drawerText, type NoticeTone } from './drawerStatus'
 import { readTransfer } from './feed'
 import type { DrawerFeed } from './useDrawer'
+
+/** 결과 알림 (3초) 글자 색 */
+const noticeTone: Record<NoticeTone, string> = {
+  done: 'text-success',
+  empty: 'text-text',
+  failed: 'text-warn'
+}
 
 /**
  * 오늘 창 아래 서랍: 먹이 받는 곳. (설계 9.7)
@@ -18,15 +25,16 @@ export function Drawer({ drawer }: { drawer: DrawerFeed }): React.JSX.Element {
   const { data: needsInput } = useBlockList('needsInput')
   const { text, tone } = drawerText({ ...drawer, dragOver, pasteMode })
 
-  const classNames = [
-    styles.drawer,
-    dragOver ? styles.open : '',
-    pasteMode ? styles.waiting : '',
-    tone ? styles[tone] : ''
-  ].join(' ')
+  const classNames = clsx(
+    'relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-8.5 py-3 shadow-panel [transition:min-height_0.15s,border-color_0.15s,background_0.15s] hover:border-border',
+    // 글을 끌고 왔을 때: 서랍이 열리듯 커지고 강조
+    dragOver ? 'min-h-33 bg-accent-soft' : 'min-h-25 bg-surface',
+    // 테두리: 눌러서 Ctrl+V를 기다릴 때 > 글을 끌고 왔을 때 > 없음 (마우스를 올리면 hover가 이긴다)
+    pasteMode ? 'border-primary' : dragOver ? 'border-accent' : 'border-transparent'
+  )
 
   return (
-    <footer className={styles.footer}>
+    <footer className="flex shrink-0 flex-col gap-2 px-3 pt-0 pb-3">
       <div
         className={classNames}
         role="button"
@@ -51,11 +59,19 @@ export function Drawer({ drawer }: { drawer: DrawerFeed }): React.JSX.Element {
           drawer.feed(readTransfer(event.dataTransfer), 'drag')
         }}
       >
-        <p className={styles.text}>{text}</p>
+        <p
+          className={clsx(
+            // 추출 결과 두 문장은 줄을 나눠 보여준다
+            'min-w-0 flex-1 text-center text-base/[1.375rem] break-keep whitespace-pre-line',
+            tone ? noticeTone[tone] : 'text-gray-60'
+          )}
+        >
+          {text}
+        </p>
         {pasteMode && (
           // 보이지 않는 입력칸에 초점을 줘서 Ctrl+V를 받는다. 다른 곳을 누르면(초점을 잃으면) 끝난다.
           <textarea
-            className={styles.pasteCatcher}
+            className="absolute size-0.25 resize-none opacity-0"
             aria-label="Ctrl+V로 넣기"
             autoFocus
             value=""
@@ -76,14 +92,14 @@ export function Drawer({ drawer }: { drawer: DrawerFeed }): React.JSX.Element {
       {needsInput && needsInput.length > 0 && (
         <button
           type="button"
-          className={styles.fill}
+          className="inherit-font cursor-pointer self-end rounded border-none bg-transparent px-1.5 py-0.5 text-[0.875rem] text-accent hover:bg-accent-soft"
           onClick={() => {
             unwrap(window.api.window.openStudio()).catch((error: unknown) =>
               console.error('[drawer] 스튜디오 열기 실패', error)
             )
           }}
         >
-          채워 주세요 <span className={styles.fillCount}>{needsInput.length}</span> →
+          채워 주세요 <span className="font-semibold">{needsInput.length}</span> →
         </button>
       )}
     </footer>
