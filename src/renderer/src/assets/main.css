@@ -10,7 +10,7 @@
     font-size: clamp(12px, min(1.1976vw, 1.9417vh), 20px);
   }
 
-  /* 창이 투명이라 App의 둥근 판만 보인다. 오늘 창(overlay.css)과 같은 방식 */
+  /* 창이 투명이라 StudioApp의 둥근 판만 보인다. 오늘 창(today.css)과 같은 방식 */
   html,
   body {
     background: transparent;

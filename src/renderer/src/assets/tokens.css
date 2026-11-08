@@ -3,7 +3,7 @@
 
 /*
  * 디자인 값은 여기 CSS 변수로만 정한다. tailwind.css의 @theme가 이 변수를 Tailwind 클래스에 잇는다. (설계 9.6)
- * 스튜디오(main.css)와 오늘 창(overlay.css)이 함께 쓴다.
+ * 스튜디오(main.css)와 오늘 창(app/today/today.css)이 함께 쓴다.
  * 값은 Figma "작업 파일"의 색 스타일(Gray/G00~G100, Main/Black·Blue·Red)을 따른다.
  */
 :root {
