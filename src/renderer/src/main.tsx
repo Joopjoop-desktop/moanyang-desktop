@@ -1,4 +1,4 @@
-import 'pretendard/dist/web/variable/pretendardvariable.css'
+import './assets/fonts/pretendard.css'
 import './assets/tokens.css'
 import './assets/main.css'
 

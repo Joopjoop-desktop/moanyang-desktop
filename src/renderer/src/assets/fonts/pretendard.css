@@ -1,0 +1,13 @@
+/*
+Pretendard Variable v1.3.9 — https://github.com/orioncactus/pretendard
+Copyright (c) 2021 Kil Hyung-jin, with Reserved Font Name Pretendard.
+Licensed under the SIL Open Font License, Version 1.1 (see ./OFL.txt).
+*/
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url('./PretendardVariable.woff2') format('woff2-variations');
+}
