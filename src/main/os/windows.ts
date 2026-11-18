@@ -12,7 +12,7 @@ type RendererPage = 'index' | 'overlay'
 
 /**
  * 오늘 창: 폭은 고정, 높이는 세로로만 조절 (설계 9.7).
- * Figma Sub_Header(폭 370, 머리줄 60)를 87.5%로 줄인 크기다. 화면 글자 기준(overlay.css의 14px)과 같이 움직인다.
+ * Figma Sub_Header(폭 370, 머리줄 60)를 87.5%로 줄인 크기다. 화면 글자 기준(renderer의 today.css 14px)과 같이 움직인다.
  */
 export const TODAY_WIDTH = 324
 export const TODAY_DEFAULT_HEIGHT = 456

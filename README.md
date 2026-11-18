@@ -187,33 +187,36 @@ src/
 ├─ preload/               # window.api 노출 (계약에 있는 채널만)
 ├─ shared/                # UI·코어 공통: IPC 계약(ipc.ts), 에러 코드, 화면용 타입
 └─ renderer/src/          # 화면 (React)
-   ├─ App.tsx             # 스튜디오: 먹이 칸 + 캘린더 + 오른쪽 목록 패널
+   ├─ app/studio/         # 스튜디오 진입점(index.html)과 셸 StudioApp
+   ├─ app/today/          # 오늘 창 진입점(overlay.html)과 셸 TodayApp
+   ├─ features/           # 기능별 폴더. 안은 components/(화면) · hooks/ · lib/(순수 로직 + 테스트)
+   │  ├─ block/           # 블록 카드, 요소 편집·추가, 라벨, 충돌 선택 창, lib/dnd(드래그 규칙), lib/conflict
+   │  ├─ calendar/        # 월간 달력, 오른쪽 패널, 날짜 넣기 (fill·capture를 조립)
+   │  ├─ fill/            # 채워 주세요·날짜 없는 일 목록, 목록 안 드래그
+   │  ├─ capture/         # 먹이 칸, 실패 카드, 완료 알림
+   │  └─ today/           # 오늘 창: 오늘 할 일, 서랍
+   ├─ components/         # 공용 UI: ui/Checkbox, toast/(아래 알림)
    ├─ api/                # unwrap, TanStack Query, 코어 이벤트 → 다시 불러오기
-   ├─ features/calendar/  # 월간 달력, 오른쪽 패널(블록 카드·하루 목록)
-   ├─ features/fill/      # 채워 주세요·날짜 없는 일 목록, 목록 안 드래그
-   ├─ features/board/     # 블록 카드, 요소 편집·추가, 드래그 규칙, 충돌 선택 창
-   ├─ features/capture/   # 먹이 칸, 실패 카드, 결과 문구
-   ├─ features/toast/     # 아래 알림(쌓기, 되돌리기)
-   ├─ overlay/            # 오늘 창: 오늘 할 일, 서랍 (진입점 overlay.html)
-   └─ lib/                # 날짜 표시, 요소 편집 값 계산
+   ├─ lib/                # 날짜(dates), 표시 문자열, 요소 편집 값, 먹이 결과 문구
+   └─ testing/            # 테스트 전용 픽스처
 drizzle/                  # drizzle-kit이 만든 마이그레이션 SQL (직접 수정 금지)
 data/                     # 개발 DB·설정 (Git 제외)
 ```
 
 ### 이걸 바꾸려면 어디를 고치나
 
-| 하고 싶은 것            | 고칠 곳 (순서대로)                                                                                                               |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| IPC 채널 추가           | `shared/ipc.ts`의 `IpcContract`·`IPC_CHANNELS` → `main/ipc/schemas.ts` → `main/ipc/handlers.ts` → 서비스 → `handlers.test.ts`    |
-| 코어 → 화면 이벤트 추가 | `shared/ipc.ts`의 `IpcEvents` → `services/deps.ts`의 `ChangeNotifier`·`ipc/electronNotifier.ts` → `renderer/src/api/events.ts`   |
-| 에러 코드 추가          | `shared/errors.ts` → `renderer/src/api/errorMessages.ts`(문구, 빠뜨리면 타입 에러)                                               |
-| 도메인 규칙             | `main/domain/` (분류 `blockClassification`, 요소 추가 `elementAdd`, 이동 `moves`, 충돌 `conflicts`, 달력 `calendar`) + 옆 테스트 |
-| 요소 종류 추가          | `shared/model.ts`의 `ELEMENT_TYPES` → `domain/elementRules.ts`(규칙·순서) → `lib/display.ts`(이름)                               |
-| 스키마 변경             | `main/db/schema.ts` → `npm run db:generate` → 생성된 SQL 확인 → 같은 커밋 ([DB 작업](docs/development.md#db-작업))               |
-| 스튜디오 화면           | `renderer/src/App.tsx` → `features/calendar`, `features/fill`, `features/board`                                                  |
-| 오늘 창 화면            | `renderer/src/overlay/Overlay.tsx` → `TodayHeader`·`TodayList`(줄 계산 `todayRows`)·`Drawer`(문구 `drawerStatus`)                |
-| 창 크기·위치·트레이     | `main/os/` (`windows.ts`, `overlayPosition.ts`, `todayWindowState.ts`, `trayMenu.ts`)                                            |
-| 추출기 교체 (11단계)    | `main/extraction/types.ts`의 `Extractor` 구현 → `main/index.ts`에서 큐에 주입. 출력 검증 `parseOutput.ts`는 그대로 거침          |
+| 하고 싶은 것            | 고칠 곳 (순서대로)                                                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| IPC 채널 추가           | `shared/ipc.ts`의 `IpcContract`·`IPC_CHANNELS` → `main/ipc/schemas.ts` → `main/ipc/handlers.ts` → 서비스 → `handlers.test.ts`           |
+| 코어 → 화면 이벤트 추가 | `shared/ipc.ts`의 `IpcEvents` → `services/deps.ts`의 `ChangeNotifier`·`ipc/electronNotifier.ts` → `renderer/src/api/events.ts`          |
+| 에러 코드 추가          | `shared/errors.ts` → `renderer/src/api/errorMessages.ts`(문구, 빠뜨리면 타입 에러)                                                      |
+| 도메인 규칙             | `main/domain/` (분류 `blockClassification`, 요소 추가 `elementAdd`, 이동 `moves`, 충돌 `conflicts`, 달력 `calendar`) + 옆 테스트        |
+| 요소 종류 추가          | `shared/model.ts`의 `ELEMENT_TYPES` → `domain/elementRules.ts`(규칙·순서) → `lib/display.ts`(이름)                                      |
+| 스키마 변경             | `main/db/schema.ts` → `npm run db:generate` → 생성된 SQL 확인 → 같은 커밋 ([DB 작업](docs/development.md#db-작업))                      |
+| 스튜디오 화면           | `renderer/src/app/studio/StudioApp.tsx` → `features/calendar`, `features/fill`, `features/block`                                        |
+| 오늘 창 화면            | `renderer/src/app/today/TodayApp.tsx` → `features/today` (`TodayHeader`·`TodayList`(줄 계산 `todayRows`)·`Drawer`(문구 `drawerStatus`)) |
+| 창 크기·위치·트레이     | `main/os/` (`windows.ts`, `overlayPosition.ts`, `todayWindowState.ts`, `trayMenu.ts`)                                                   |
+| 추출기 교체 (11단계)    | `main/extraction/types.ts`의 `Extractor` 구현 → `main/index.ts`에서 큐에 주입. 출력 검증 `parseOutput.ts`는 그대로 거침                 |
 
 ---
 
