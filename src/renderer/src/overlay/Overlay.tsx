@@ -5,7 +5,6 @@ import { Drawer } from './Drawer'
 import { TodayHeader } from './TodayHeader'
 import { TodayList } from './TodayList'
 import { todayRows } from './todayRows'
-import styles from './TodayWindow.module.css'
 import { useDrawer } from './useDrawer'
 import { useLocalToday } from './useLocalToday'
 import { useTodayWindow } from './useTodayWindow'
@@ -29,7 +28,9 @@ export function Overlay(): React.JSX.Element {
 
   return (
     <main
-      className={styles.window}
+      // 창은 투명이고, 이 판 하나가 보이는 전부다. 투명도는 --today-opacity로 받고, 마우스를 올리면 진해진다
+      // (Figma Sub_Header + Sub_Arcodian Menu)
+      className="flex h-full flex-col overflow-hidden rounded-window bg-bg opacity-[var(--today-opacity,0.9)] [transition:opacity_0.15s] hover:opacity-100"
       style={{ '--today-opacity': controls.opacity / 100 } as React.CSSProperties}
     >
       <TodayHeader
@@ -42,7 +43,7 @@ export function Overlay(): React.JSX.Element {
       />
       {!controls.collapsed && (
         <>
-          <div className={styles.body}>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
             <TodayList rows={rows} error={error} />
           </div>
           <Drawer drawer={drawer} />

@@ -1,0 +1,86 @@
+/*
+ * Tailwind 진입점 (스튜디오·오늘 창 공용)
+ * - preflight는 아직 끈다.
+ * - 전역 규칙은 @layer base에 둔다. layer 밖 CSS는 Tailwind를 이긴다.
+ * - 값은 tokens.css 변수가 정하고, @theme는 이름만 잇는다.
+ * - 크기는 rem. windows.ts 창 크기와 맞춘 값만 px.
+ */
+@layer properties, theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+/* 클래스는 렌더러 코드(src/renderer/src)에서만 찾는다 */
+@import 'tailwindcss/utilities.css' layer(utilities) source('../');
+
+@theme inline reference {
+  /* Tailwind 기본 색은 끈다. 색은 토큰으로만 쓴다. */
+  --color-*: initial;
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-gray-00: var(--gray-00);
+  --color-gray-20: var(--gray-20);
+  --color-gray-30: var(--gray-30);
+  --color-gray-40: var(--gray-40);
+  --color-gray-50: var(--gray-50);
+  --color-gray-60: var(--gray-60);
+  --color-gray-70: var(--gray-70);
+  --color-gray-80: var(--gray-80);
+  --color-gray-90: var(--gray-90);
+  --color-gray-100: var(--gray-100);
+
+  --color-bg: var(--color-bg);
+  --color-sidebar: var(--color-sidebar);
+  --color-surface: var(--color-surface);
+  --color-hover: var(--color-hover);
+  --color-border: var(--color-border);
+  --color-text: var(--color-text);
+  --color-muted: var(--color-muted);
+  --color-primary: var(--color-primary);
+  --color-primary-text: var(--color-primary-text);
+  --color-accent: var(--color-accent);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-warn: var(--color-warn);
+  --color-warn-soft: var(--color-warn-soft);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+
+  /* rounded / rounded-lg / rounded-window / rounded-pill (기본 크기 키 rounded-md 등은 쓰지 않는다) */
+  --radius: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-window: var(--radius-window);
+  --radius-pill: var(--radius-pill);
+
+  /* shadow / shadow-panel / shadow-button (기본 크기 키 shadow-lg 등은 쓰지 않는다) */
+  --shadow: var(--shadow);
+  --shadow-panel: var(--shadow-panel);
+  --shadow-button: var(--shadow-button);
+
+  --font-sans: var(--font-family);
+}
+
+/* 창 끌기 영역 (frame: false 창) */
+@utility app-drag {
+  -webkit-app-region: drag;
+}
+
+@utility app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/*
+ * hover:는 v4 기본값이 @media (hover: hover) 안에서만 켜진다. 마우스 말고 터치나 펜으로 쓸 때도
+ * 일반 :hover처럼 동작하도록 그냥 :hover로 둔다. (group-hover:도 이것을 따른다)
+ */
+@custom-variant hover (&:hover);
+
+/*
+ * font: inherit (버튼·입력칸이 시스템 글꼴 크기로 돌아가지 않게).
+ * 단축 속성이라 utilities에 두면 text-*·font-*·leading-*보다 뒤에 나와 덮어쓴다.
+ * 그래서 그보다 아래인 components layer에 둔다.
+ */
+@layer components {
+  .inherit-font {
+    font: inherit;
+  }
+}

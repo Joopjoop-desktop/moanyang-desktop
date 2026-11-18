@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { messageForError } from '../../api/errorMessages'
 import { ToastContext, type ToastApi, type ToastInput } from './toastContext'
-import styles from './ToastProvider.module.css'
 import { pushToast } from './toastStack'
 
 /** 알림 하나가 떠 있는 시간 */
@@ -40,7 +39,7 @@ export function ToastProvider({ children }: { children: ReactNode }): React.JSX.
     <ToastContext.Provider value={api}>
       {children}
       {toasts.length > 0 && (
-        <div className={styles.stack}>
+        <div className="pointer-events-none fixed bottom-6 left-1/2 z-100 flex -translate-x-1/2 flex-col items-center gap-2">
           {toasts.map((toast) => (
             <ToastItem
               key={toast.id}
@@ -70,10 +69,17 @@ function ToastItem({ toast, onExpire, onAction }: ToastItemProps): React.JSX.Ele
   }, [id, onExpire])
 
   return (
-    <div className={styles.toast} role="status">
+    <div
+      className="pointer-events-auto flex items-center gap-4 rounded-lg bg-text px-4 py-2.5 whitespace-nowrap text-surface shadow-[0_4px_12px_rgba(0,0,0,0.2)]"
+      role="status"
+    >
       <span>{toast.message}</span>
       {toast.action && (
-        <button type="button" className={styles.action} onClick={onAction}>
+        <button
+          type="button"
+          className="inherit-font cursor-pointer border-none bg-transparent p-0 font-semibold text-accent-soft hover:underline"
+          onClick={onAction}
+        >
           {toast.action.label}
         </button>
       )}

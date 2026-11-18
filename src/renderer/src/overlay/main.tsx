@@ -1,5 +1,6 @@
 import '../assets/fonts/pretendard.css'
 import '../assets/tokens.css'
+import '../assets/tailwind.css'
 import './overlay.css'
 
 import { QueryClientProvider } from '@tanstack/react-query'

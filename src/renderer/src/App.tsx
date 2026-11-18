@@ -14,13 +14,15 @@ function App(): React.JSX.Element {
   useCompletedToast()
 
   return (
-    <div className="app">
-      <header className="app-titlebar">
-        <span className="app-logo">줍줍</span>
+    // 맨 위 검은 줄, 아래 달력 + 오른쪽 패널. 창이 투명이라 이 둥근 판만 보인다
+    <div className="flex h-full flex-col overflow-hidden rounded-window bg-bg">
+      {/* 검은 줄: 빈 곳을 잡고 끌면 창이 움직인다. 버튼은 끌기에서 빼야 눌린다 */}
+      <header className="relative flex h-13 shrink-0 items-center justify-center bg-primary text-primary-text select-none app-drag">
+        <span className="text-[1.25rem] font-semibold">줍줍</span>
         {/* 창 닫기 = 숨기기. 종료는 트레이 메뉴에서 (설계 9.7) */}
         <button
           type="button"
-          className="app-close"
+          className="absolute top-4 right-7 flex size-5 cursor-pointer border-none bg-transparent p-0 app-no-drag [&_img]:size-5"
           aria-label="창 닫기"
           onClick={() => {
             unwrap(window.api.window.closeStudio()).catch((error: unknown) =>

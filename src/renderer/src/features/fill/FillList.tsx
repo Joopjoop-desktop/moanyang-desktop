@@ -1,4 +1,5 @@
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
+import clsx from 'clsx'
 import { useState } from 'react'
 import type { BlockListFilter, BlockView } from '@shared/views'
 import { messageForError } from '../../api/errorMessages'
@@ -9,7 +10,6 @@ import { CompleteCheckbox } from '../board/BlockActionBar'
 import { BlockCard } from '../board/BlockCard'
 import { BlockTitleLine } from '../board/BlockTitleLine'
 import type { DragData, DropData } from '../board/dnd/dropRules'
-import styles from './FillList.module.css'
 
 type ListFilter = Extract<BlockListFilter, 'needsInput' | 'undated'>
 
@@ -74,19 +74,19 @@ function Section({
   openId,
   onToggle
 }: SectionProps): React.JSX.Element | null {
-  if (error) return <p className={styles.message}>{messageForError(error)}</p>
-  if (!data) return <p className={styles.message}>불러오는 중…</p>
+  if (error) return <p className="text-[0.875rem] text-muted">{messageForError(error)}</p>
+  if (!data) return <p className="text-[0.875rem] text-muted">불러오는 중…</p>
   if (data.length === 0) return null
 
   return (
-    <section className={styles.section}>
+    <section className="flex flex-col gap-4.25">
       {title && (
-        <h3 className={styles.title}>
+        <h3 className="flex items-center gap-2 text-[1.125rem] font-semibold text-text">
           {title}
-          <span className={styles.count}>{data.length}</span>
+          <span className="font-medium">{data.length}</span>
         </h3>
       )}
-      <ul className={styles.rows}>
+      <ul className="flex list-none flex-col gap-4.25 p-0">
         {data.map((block) => (
           <Row
             key={block.id}
@@ -126,20 +126,22 @@ function Row({ block, showMissing, open, onToggle }: RowProps): React.JSX.Elemen
   } = useDraggable({ id: `row-drag:${block.id}`, data: dragData })
   const targeted = useIsDropTarget(block.id)
 
-  const rowClass = [
-    styles.row,
-    targeted ? styles.target : '',
-    isDragging ? styles.dragging : ''
-  ].join(' ')
+  // 카드 한 장: 한 줄 항목 + (펼치면) 내용
+  const rowClass = clsx(
+    'flex flex-col rounded-lg bg-surface shadow-panel',
+    // 다른 블록의 요소나 블록을 이 카드 위로 끌고 있을 때
+    targeted && 'outline-2 -outline-offset-2 outline-accent',
+    isDragging && 'opacity-40'
+  )
 
   return (
     <li className={rowClass}>
-      <div ref={setDropRef} className={styles.line}>
+      <div ref={setDropRef} className="flex items-start gap-4 p-3 [&>input]:mt-0.25">
         <CompleteCheckbox block={block} />
         <button
           ref={setDragRef}
           type="button"
-          className={styles.toggle}
+          className="inherit-font flex min-w-0 flex-1 cursor-pointer touch-none items-start gap-2 border-none bg-transparent p-0 text-left text-text"
           aria-expanded={open}
           title="끌어서 합치거나 날짜 칸에 놓기"
           onClick={onToggle}
@@ -147,7 +149,7 @@ function Row({ block, showMissing, open, onToggle }: RowProps): React.JSX.Elemen
           {...attributes}
         >
           <BlockTitleLine block={block} open={open} showMissing={showMissing} />
-          <img className={styles.arrow} src={open ? chevronUp : chevronDown} alt="" />
+          <img className="mt-0.5 size-5 shrink-0" src={open ? chevronUp : chevronDown} alt="" />
         </button>
       </div>
       {open && <BlockCard block={block} handle={false} embedded />}
@@ -164,11 +166,12 @@ function SplitZone(): React.JSX.Element {
   return (
     <div
       ref={setNodeRef}
-      className={[
-        styles.split,
-        active ? styles.splitActive : '',
-        active && isOver ? styles.splitOver : ''
-      ].join(' ')}
+      className={clsx(
+        'flex min-h-14 items-center justify-center rounded-lg border-2 border-dashed text-[0.875rem] text-accent',
+        !active && 'border-transparent',
+        active && !isOver && 'border-border',
+        active && isOver && 'border-accent bg-accent-soft'
+      )}
     >
       {active && '여기에 놓으면 새 블록으로 나눠요'}
     </div>

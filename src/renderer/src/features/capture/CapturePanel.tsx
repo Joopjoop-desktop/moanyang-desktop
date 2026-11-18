@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import clsx from 'clsx'
 import { useState } from 'react'
 import type { CaptureView } from '@shared/captures'
 import { unwrap } from '../../api/client'
@@ -8,12 +9,11 @@ import { queryKeys } from '../../api/queryKeys'
 import { formatTimestamp } from '../../lib/display'
 import { useToast } from '../toast/toastContext'
 import { failedCardMessage, pasteProblem } from './captureRules'
-import styles from './CapturePanel.module.css'
 
 /** 스튜디오 오른쪽 패널 맨 위 먹이 칸: 붙여넣기 입력창 + 실패 카드 (설계 9.6) */
 export function CapturePanel(): React.JSX.Element {
   return (
-    <div className={styles.panel}>
+    <div className="flex shrink-0 flex-col gap-3">
       <PasteBox />
       <FailedCards />
     </div>
@@ -41,10 +41,14 @@ function PasteBox(): React.JSX.Element {
   }
 
   return (
-    <div className={styles.paste}>
+    <div className="flex flex-col gap-3 rounded-lg bg-surface px-2.5 pt-8 pb-3 shadow">
       <textarea
         // 비어 있을 때만 안내 글을 가운데에 두고, 붙여넣은 글은 왼쪽부터 보여준다
-        className={text ? styles.textarea : `${styles.textarea} ${styles.empty}`}
+        className={clsx(
+          // 글 아래 선 하나만 있는 입력칸. 쓴 만큼 늘어나고 160px부터 스크롤한다
+          'block field-sizing-content max-h-40 min-h-13.5 w-full resize-none rounded-none border-0 border-b border-border bg-transparent px-0 pt-0 pb-[1.9375rem] text-base/[1.375rem] text-text placeholder:text-gray-60 focus:border-b-primary focus:outline-none',
+          !text && 'text-center'
+        )}
         rows={2}
         placeholder="메시지를 붙여넣고 Ctrl + Enter로 먹이 주기"
         value={text}
@@ -56,11 +60,11 @@ function PasteBox(): React.JSX.Element {
           }
         }}
       />
-      <div className={styles.pasteFooter}>
-        {problem && <span className={styles.problem}>{problem}</span>}
+      <div className="flex items-center justify-end gap-3">
+        {problem && <span className="text-[0.75rem] text-warn">{problem}</span>}
         <button
           type="button"
-          className={styles.primary}
+          className="inherit-font cursor-pointer rounded border-none bg-primary px-2 py-1 text-sm/[1.375rem] font-medium text-primary-text disabled:cursor-default disabled:opacity-50"
           disabled={mutation.isPending}
           onClick={submit}
         >
@@ -77,13 +81,18 @@ function FailedCards(): React.JSX.Element | null {
   if (!data || data.length === 0) return null
 
   return (
-    <ul className={styles.failedList}>
+    <ul className="flex list-none flex-col gap-2 p-0">
       {data.map((capture) => (
         <FailedCard key={capture.id} capture={capture} />
       ))}
     </ul>
   )
 }
+
+/** 실패 카드의 다시 시도·닫기 버튼 */
+const secondaryButton = clsx(
+  'inherit-font cursor-pointer rounded border border-border bg-surface px-2.5 py-0.5 text-[0.75rem] text-text disabled:cursor-default disabled:opacity-50'
+)
 
 function FailedCard({ capture }: { capture: CaptureView }): React.JSX.Element {
   const toast = useToast()
@@ -105,13 +114,13 @@ function FailedCard({ capture }: { capture: CaptureView }): React.JSX.Element {
   const busy = retry.isPending || dismiss.isPending
 
   return (
-    <li className={styles.failed}>
-      <span className={styles.failedTime}>{formatTimestamp(capture.capturedAt)}</span>
-      <span className={styles.failedMessage}>{failedCardMessage(capture)}</span>
+    <li className="flex items-center gap-2.5 rounded-lg bg-warn-soft px-3 py-2.5">
+      <span className="text-[0.75rem] text-muted">{formatTimestamp(capture.capturedAt)}</span>
+      <span className="flex-1 text-warn">{failedCardMessage(capture)}</span>
       {capture.canRetry && (
         <button
           type="button"
-          className={styles.secondary}
+          className={secondaryButton}
           disabled={busy}
           onClick={() => retry.mutate()}
         >
@@ -120,7 +129,7 @@ function FailedCard({ capture }: { capture: CaptureView }): React.JSX.Element {
       )}
       <button
         type="button"
-        className={styles.secondary}
+        className={secondaryButton}
         disabled={busy}
         onClick={() => dismiss.mutate()}
       >

@@ -4,7 +4,6 @@ import { unwrap } from '../../api/client'
 import { messageForError } from '../../api/errorMessages'
 import { useLabels } from '../../api/queries'
 import { useToast } from '../toast/toastContext'
-import styles from './LabelPicker.module.css'
 
 type LabelChange = { kind: 'attach' | 'detach'; labelId: string }
 
@@ -32,14 +31,17 @@ export function LabelPicker({ block }: { block: BlockView }): React.JSX.Element 
   if (!editable && block.labels.length === 0) return null
 
   return (
-    <div className={styles.labels}>
+    <div className="flex flex-wrap items-center gap-1">
       {block.labels.map((label) => (
-        <span key={label.id} className={styles.chip}>
+        <span
+          key={label.id}
+          className="inline-flex items-center gap-1 rounded-pill border border-border bg-surface px-2 text-sm/[1.375rem] font-medium text-muted"
+        >
           {label.name}
           {editable && (
             <button
               type="button"
-              className={styles.remove}
+              className="inherit-font cursor-pointer border-none bg-transparent p-0 leading-none text-inherit"
               aria-label={`${label.name} 떼기`}
               disabled={mutation.isPending}
               onClick={() => mutation.mutate({ kind: 'detach', labelId: label.id })}
@@ -51,7 +53,7 @@ export function LabelPicker({ block }: { block: BlockView }): React.JSX.Element 
       ))}
       {editable && available.length > 0 && (
         <select
-          className={styles.select}
+          className="inherit-font cursor-pointer rounded-pill border border-dashed border-border bg-transparent px-1 py-0 text-sm/[1.375rem] text-muted"
           value=""
           disabled={mutation.isPending}
           onChange={(event) => mutation.mutate({ kind: 'attach', labelId: event.target.value })}

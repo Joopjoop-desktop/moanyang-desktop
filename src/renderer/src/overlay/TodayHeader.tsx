@@ -1,10 +1,10 @@
+import clsx from 'clsx'
 import { useState } from 'react'
 import { TODAY_OPACITY_MAX, TODAY_OPACITY_MIN } from '@shared/today'
 import chevronDownLight from '../assets/icons/chevron-down-light.svg'
 import cogLight from '../assets/icons/cog-light.svg'
 import { formatCalendarDate } from '../lib/display'
 import { readTransfer, type FeedInput } from './feed'
-import styles from './TodayWindow.module.css'
 import type { TodayWindowControls } from './useTodayWindow'
 
 type Props = {
@@ -17,6 +17,11 @@ type Props = {
   /** 접혀 있을 때 머리줄에 놓은 것을 먹인다 */
   onFeed: (input: FeedInput) => void
 }
+
+/** 머리줄 버튼은 끌기 영역에서 빼야 누를 수 있다 */
+const iconButton = clsx(
+  'flex size-5 cursor-pointer items-center justify-center border-none bg-transparent p-0 app-no-drag hover:opacity-70 [&_img]:size-5'
+)
 
 /**
  * 오늘 창 머리줄 (설계 9.7). 52px = 접었을 때 창 높이(코어 TODAY_COLLAPSED_HEIGHT).
@@ -36,12 +41,18 @@ export function TodayHeader({
 
   return (
     <>
-      <header className={styles.header} title="끌어서 옮기기">
+      <header
+        className="flex h-[52px] shrink-0 cursor-grab items-center gap-3 bg-primary px-5 text-primary-text app-drag"
+        title="끌어서 옮기기"
+      >
         {controls.collapsed ? (
           // 접혀 있을 때는 글자 부분이 서랍 대신 먹이를 받는다. 끌기 영역에서는 놓기를 받을 수 없어
           // 이 부분만 끌기에서 빼고, 나머지 빈 곳으로 창을 옮긴다
           <span
-            className={dropOver ? `${styles.dropTarget} ${styles.dropOver}` : styles.dropTarget}
+            className={clsx(
+              '-ml-2 flex min-w-0 cursor-default items-center gap-2 rounded border border-dashed px-2 py-1 text-[1.25rem] font-semibold whitespace-nowrap app-no-drag',
+              dropOver ? 'border-bg bg-[rgba(249,249,249,0.16)]' : 'border-transparent'
+            )}
             onDragOver={(event) => {
               event.preventDefault()
               event.dataTransfer.dropEffect = 'copy'
@@ -59,16 +70,22 @@ export function TodayHeader({
             }}
           >
             오늘 {date}
-            {remaining > 0 && <span className={styles.badge}>{remaining}</span>}
+            {remaining > 0 && (
+              <span className="min-w-5.5 rounded-[62.4375rem] bg-bg px-1.75 text-center text-[0.8125rem]/[1.375rem] text-primary">
+                {remaining}
+              </span>
+            )}
           </span>
         ) : (
-          <span className={styles.heading}>오늘 {date}</span>
+          <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[1.25rem] font-semibold whitespace-nowrap">
+            오늘 {date}
+          </span>
         )}
-        {controls.collapsed && <span className={styles.spacer} />}
+        {controls.collapsed && <span className="flex-1 self-stretch" />}
         {!controls.collapsed && (
           <button
             type="button"
-            className={settingsOpen ? `${styles.iconButton} ${styles.active}` : styles.iconButton}
+            className={clsx(iconButton, settingsOpen && 'opacity-70')}
             aria-label="투명도"
             aria-expanded={settingsOpen}
             onClick={onToggleSettings}
@@ -78,7 +95,7 @@ export function TodayHeader({
         )}
         <button
           type="button"
-          className={styles.iconButton}
+          className={iconButton}
           aria-label={controls.collapsed ? '펼치기' : '접기'}
           onClick={controls.toggleCollapsed}
         >
@@ -86,16 +103,17 @@ export function TodayHeader({
           <img
             src={chevronDownLight}
             alt=""
-            className={controls.collapsed ? styles.arrowCollapsed : undefined}
+            className={controls.collapsed ? '-rotate-90' : undefined}
           />
         </button>
       </header>
 
       {settingsOpen && !controls.collapsed && (
-        <label className={styles.settings}>
+        <label className="flex shrink-0 items-center gap-2 px-5 pt-3 pb-0 text-[0.75rem] text-muted">
           투명도
           <input
             type="range"
+            className="min-w-0 flex-1"
             min={TODAY_OPACITY_MIN}
             max={TODAY_OPACITY_MAX}
             value={controls.opacity}
@@ -104,7 +122,7 @@ export function TodayHeader({
             onPointerUp={controls.saveOpacity}
             onKeyUp={controls.saveOpacity}
           />
-          <span className={styles.settingsValue}>{controls.opacity}%</span>
+          <span className="w-8.5 text-right">{controls.opacity}%</span>
         </label>
       )}
     </>
