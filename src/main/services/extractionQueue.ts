@@ -162,7 +162,11 @@ export class ExtractionQueue {
   }
 
   private handleExtractFailure(captureId: string, error: unknown): void {
-    if (!(error instanceof ExtractError)) {
+    if (error instanceof ExtractError) {
+      // 원인을 터미널에서 볼 수 있게 남긴다. ExtractError 메시지에는 원문을 넣지 않는다 (설계 8.9)
+      const kind = error.retryable ? '재시도 가능' : '재시도 안 함'
+      console.warn(`[extraction] ${captureId} 추출 실패 (${kind}): ${error.message}`)
+    } else {
       console.error(`[extraction] ${captureId} 추출기 오류`, error)
     }
     const retryable = error instanceof ExtractError && error.retryable

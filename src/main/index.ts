@@ -13,7 +13,7 @@ import { registerIpcHandlers } from './ipc/register'
 import { createServices } from './services'
 import type { ServiceDeps } from './services/deps'
 import { ExtractionQueue } from './services/extractionQueue'
-import { MockExtractor } from './extraction/mockExtractor'
+import { createExtractor } from './extraction/createExtractor'
 import { createDevIpcHandlers } from './dev/handlers'
 import { resolveDataDir } from './db/paths'
 import { resolveOverlayPosition } from './os/overlayPosition'
@@ -234,10 +234,16 @@ app.whenReady().then(() => {
 
   // 개발 전용 채널(dev:*)은 개발 빌드에서만 등록한다. preload와 같은 빌드 시점 값을 써서
   // 배포 빌드에서는 이 분기가 통째로 빠진다 (설계 9.1)
-  // 11단계 전까지는 배포 빌드도 MockExtractor. 개발 모드는 처리 중 상태가 보이도록 지연을 둔다 (설계 8.8)
+  // .env에 서버 주소가 있으면 서버 추출기, 없으면 MockExtractor (설계 8.9)
+  const extractor = createExtractor({
+    serverUrl: import.meta.env.MAIN_VITE_EXTRACT_URL,
+    serverKey: import.meta.env.MAIN_VITE_EXTRACT_KEY,
+    dev: import.meta.env.DEV
+  })
+  console.log('[extraction] 추출기', extractor.constructor.name)
   queue = new ExtractionQueue({
     captures: services.captures,
-    extractor: new MockExtractor({ delayMs: import.meta.env.DEV ? 1_500 : 0 }),
+    extractor,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     notifier: deps.notifier
   })
