@@ -16,6 +16,31 @@
 
 ---
 
+## 설치하기
+
+[Releases](https://github.com/Joopjoop-desktop/moanyang-desktop/releases/latest)에서 쓰는 컴퓨터에 맞는 파일을 받습니다.
+
+| OS                         | 받을 파일                                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Windows 10 이상            | [`MoaNyang-Setup.exe`](https://github.com/Joopjoop-desktop/moanyang-desktop/releases/latest/download/MoaNyang-Setup.exe) |
+| macOS (Apple Silicon 전용) | [`MoaNyang-arm64.dmg`](https://github.com/Joopjoop-desktop/moanyang-desktop/releases/latest/download/MoaNyang-arm64.dmg) |
+
+맥은 M1 이후의 Apple Silicon 맥에서만 실행됩니다(인텔 맥 미지원).
+
+> [!WARNING]
+> 아직 코드 서명·공증을 하지 않아서 처음 설치할 때 경고가 나타납니다. 이 저장소의 Releases에서 받은 파일인지 확인한 뒤 진행하세요.
+
+- **Windows:** "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누릅니다.
+- **macOS:** dmg를 열어 앱을 응용 프로그램 폴더로 옮긴 뒤 실행합니다. 열리지 않으면 **시스템 설정 → 개인정보 보호 및 보안**에서 **확인 없이 열기**를 누릅니다. 그래도 "손상되었습니다"라고 나오면 터미널에서 아래를 실행합니다.
+
+  ```bash
+  xattr -cr /Applications/MoaNyang.app
+  ```
+
+배포하는 방법은 [`CONTRIBUTING.md`](CONTRIBUTING.md#배포하는-법)에 있습니다.
+
+---
+
 ## 지금 상태
 
 - 개발 순서([설계 13.1](docs/design.md))의 **0~10단계 완료**. 다음은 11단계(실제 AI 추출), 12단계(E2E 테스트·배포 정리).
