@@ -43,8 +43,8 @@
 
 ## 지금 상태
 
-- 개발 순서([설계 13.1](docs/design.md))의 **0~10단계 완료**. 다음은 11단계(실제 AI 추출), 12단계(E2E 테스트·배포 정리).
-- 지금 추출은 **규칙으로 동작하는 가짜 추출기(`MockExtractor`)** 입니다. 11단계에서 실제 LLM 호출로 바뀝니다. Mock 규칙은 [개발 가이드](docs/development.md#먹이-주기-mock-추출)에 있습니다.
+- 개발 순서([설계 13.1](docs/design.md))의 **0~10단계 완료**. 지금은 11단계(실제 AI 추출), 다음은 12단계(E2E 테스트·배포 정리).
+- 추출은 `.env`에 서버 주소가 있으면 **우리 서버를 거친 실제 AI 추출(`ServerExtractor`)**, 없으면 **규칙으로 동작하는 가짜 추출기(`MockExtractor`)** 입니다. 설정은 [실제 추출 (서버)](docs/development.md#실제-추출-서버), Mock 규칙은 [먹이 주기](docs/development.md#먹이-주기-mock-추출)에 있습니다.
 - Windows만 지원합니다(macOS는 이후).
 
 ### 화면 구성
@@ -126,6 +126,7 @@ npm run dev
 - 스튜디오 창과 화면 오른쪽 위의 오늘 창이 함께 뜹니다. 개발 DB는 `data/joopjoop.db`에 자동으로 만들어집니다.
 - 직접 먹여 보기: 스튜디오 맨 위 먹이 칸에 `견적서 송부 2026-10-20 11:00`을 붙여넣고 "먹이 주기" → 캘린더 10월 20일에 생깁니다. 상황별 예시 글 10가지는 [따라 해 보기](docs/development.md#따라-해-보기)에 있습니다.
 - 샘플 데이터 한 번에 넣기: 스튜디오에서 F12 → 콘솔에 `await window.api.dev.seed()` (분류별 샘플 블록 9개).
+- `.env` 없이 켜면 Mock 추출로 동작합니다. 실제 AI 추출은 [실제 추출 (서버)](docs/development.md#실제-추출-서버)대로 `.env`를 만들면 됩니다.
 - 끄기: 터미널에서 `Ctrl+C`, 또는 트레이 아이콘 → 종료.
 
 ### 6. VS Code
@@ -184,7 +185,7 @@ PR을 올리기 전에 `test`, `typecheck`, `lint` 세 개를 통과시킵니다
   │ window.api.capture.submit({ text, method })        ← 원문은 메모리에만 (DB에 저장 안 함)
   ▼
 ExtractionQueue (services/extractionQueue.ts)          ← 순차 처리, 실패 시 2·10·30초 자동 재시도
-  │ Extractor.extract()  ← 지금은 MockExtractor, 11단계에서 실제 LLM
+  │ Extractor.extract()  ← .env에 서버 주소가 있으면 ServerExtractor, 없으면 MockExtractor
   ▼
 CaptureService.complete → 블록·요소 저장 (한 트랜잭션, History 기록)
   │ 커밋 후 이벤트: blocks:changed → capture:completed { toCalendar, needsInput }
@@ -205,7 +206,7 @@ src/
 │  ├─ domain/             # 순수 계산 (Electron·DB 비의존): 이동·충돌·분류·달력 표시
 │  ├─ repositories/       # DB 조회·저장, 소프트 딜리트 필터
 │  ├─ db/                 # Drizzle 스키마, 연결, 마이그레이션 실행, 시스템 라벨
-│  ├─ extraction/         # Extractor 인터페이스, MockExtractor, 출력 검증
+│  ├─ extraction/         # Extractor 인터페이스, Mock·서버 추출기, 고르기, 출력 검증
 │  ├─ os/                 # 창(스튜디오·오늘 창), 트레이, 종료 확인, 설정 파일
 │  ├─ dev/                # 개발 모드 전용 (dev:seed)
 │  └─ infra/              # newId(), nowIso()
@@ -227,18 +228,18 @@ data/                     # 개발 DB·설정 (Git 제외)
 
 ### 이걸 바꾸려면 어디를 고치나
 
-| 하고 싶은 것            | 고칠 곳 (순서대로)                                                                                                               |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| IPC 채널 추가           | `shared/ipc.ts`의 `IpcContract`·`IPC_CHANNELS` → `main/ipc/schemas.ts` → `main/ipc/handlers.ts` → 서비스 → `handlers.test.ts`    |
-| 코어 → 화면 이벤트 추가 | `shared/ipc.ts`의 `IpcEvents` → `services/deps.ts`의 `ChangeNotifier`·`ipc/electronNotifier.ts` → `renderer/src/api/events.ts`   |
-| 에러 코드 추가          | `shared/errors.ts` → `renderer/src/api/errorMessages.ts`(문구, 빠뜨리면 타입 에러)                                               |
-| 도메인 규칙             | `main/domain/` (분류 `blockClassification`, 요소 추가 `elementAdd`, 이동 `moves`, 충돌 `conflicts`, 달력 `calendar`) + 옆 테스트 |
-| 요소 종류 추가          | `shared/model.ts`의 `ELEMENT_TYPES` → `domain/elementRules.ts`(규칙·순서) → `lib/display.ts`(이름)                               |
-| 스키마 변경             | `main/db/schema.ts` → `npm run db:generate` → 생성된 SQL 확인 → 같은 커밋 ([DB 작업](docs/development.md#db-작업))               |
-| 스튜디오 화면           | `renderer/src/App.tsx` → `features/calendar`, `features/fill`, `features/board`                                                  |
-| 오늘 창 화면            | `renderer/src/overlay/Overlay.tsx` → `TodayHeader`·`TodayList`(줄 계산 `todayRows`)·`Drawer`(문구 `drawerStatus`)                |
-| 창 크기·위치·트레이     | `main/os/` (`windows.ts`, `overlayPosition.ts`, `todayWindowState.ts`, `trayMenu.ts`)                                            |
-| 추출기 교체 (11단계)    | `main/extraction/types.ts`의 `Extractor` 구현 → `main/index.ts`에서 큐에 주입. 출력 검증 `parseOutput.ts`는 그대로 거침          |
+| 하고 싶은 것            | 고칠 곳 (순서대로)                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| IPC 채널 추가           | `shared/ipc.ts`의 `IpcContract`·`IPC_CHANNELS` → `main/ipc/schemas.ts` → `main/ipc/handlers.ts` → 서비스 → `handlers.test.ts`        |
+| 코어 → 화면 이벤트 추가 | `shared/ipc.ts`의 `IpcEvents` → `services/deps.ts`의 `ChangeNotifier`·`ipc/electronNotifier.ts` → `renderer/src/api/events.ts`       |
+| 에러 코드 추가          | `shared/errors.ts` → `renderer/src/api/errorMessages.ts`(문구, 빠뜨리면 타입 에러)                                                   |
+| 도메인 규칙             | `main/domain/` (분류 `blockClassification`, 요소 추가 `elementAdd`, 이동 `moves`, 충돌 `conflicts`, 달력 `calendar`) + 옆 테스트     |
+| 요소 종류 추가          | `shared/model.ts`의 `ELEMENT_TYPES` → `domain/elementRules.ts`(규칙·순서) → `lib/display.ts`(이름)                                   |
+| 스키마 변경             | `main/db/schema.ts` → `npm run db:generate` → 생성된 SQL 확인 → 같은 커밋 ([DB 작업](docs/development.md#db-작업))                   |
+| 스튜디오 화면           | `renderer/src/App.tsx` → `features/calendar`, `features/fill`, `features/board`                                                      |
+| 오늘 창 화면            | `renderer/src/overlay/Overlay.tsx` → `TodayHeader`·`TodayList`(줄 계산 `todayRows`)·`Drawer`(문구 `drawerStatus`)                    |
+| 창 크기·위치·트레이     | `main/os/` (`windows.ts`, `overlayPosition.ts`, `todayWindowState.ts`, `trayMenu.ts`)                                                |
+| 추출기 추가·교체        | `main/extraction/types.ts`의 `Extractor` 구현 → `extraction/createExtractor.ts`에서 고르기. 출력 검증 `parseOutput.ts`는 그대로 거침 |
 
 ---
 
@@ -273,7 +274,7 @@ IPC → Service → Domain / Repository → DB
 
 - **메시지 원문은 저장하지 않습니다.** 추출 큐의 메모리에만 두고, DB·로그·에러 수집 어디에도 남기지 않습니다.
 - 클립보드는 사용자가 붙여넣는 순간에만 읽습니다. 창 제목은 저장하지 않습니다.
-- 개발용 API 키는 `.env`(Git 제외)에 두고, 키가 들어간 빌드는 외부에 배포하지 않습니다.
+- AI 키는 서버에만 둡니다. 앱의 서버 키는 `.env`(Git 제외)에 두고, 키가 들어간 빌드는 외부에 배포하지 않습니다(빌드 안에 들어가 꺼낼 수 있음).
 
 **테스트**
 
