@@ -1,0 +1,201 @@
+# 배포 (#42)
+# 버전 태그(v0.1.0 등)를 push하면 Windows·맥 설치 파일을 만들어 GitHub Release 초안에 올린다.
+# 자동으로 공개하지 않는다. 사람이 설치해 보고 Releases 페이지에서 Publish한다.
+# 앱 이름에 묶이지 않도록 설치 파일과 .app은 확장자로 찾는다(이름 변경 #44 이후에도 그대로 동작).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  # 실패한 배포를 같은 태그로 다시 돌릴 때 쓴다
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '다시 빌드할 태그 (예: v0.1.0)'
+        required: true
+
+permissions:
+  contents: read
+
+# 같은 태그의 배포가 겹치면 먼저 것을 기다린다
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  # 태그와 package.json 버전이 다르면 비싼 맥 빌드 전에 멈춘다
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ env.TAG }}
+
+      - name: Compare tag and package.json version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::태그($TAG)와 package.json 버전(v$VERSION)이 다릅니다."
+            exit 1
+          fi
+          echo "버전 확인: $TAG"
+
+  build:
+    needs: check-version
+    strategy:
+      # 한쪽이 실패하면 다른 쪽도 멈춘다. 어차피 Release 초안은 둘 다 성공해야 만든다
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            # 랜딩페이지 다운로드 버튼이 가리키는 고정 이름 (moanyang-landing#1)
+            fixed-name: MoaNyang-Setup.exe
+          # macos-latest는 M칩(arm64) 서버. better-sqlite3도 여기서 arm64용으로 컴파일된다
+          - os: macos-latest
+            platform: mac
+            fixed-name: MoaNyang-arm64.dmg
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ env.TAG }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # postinstall(install-app-deps)에서 better-sqlite3를 Electron에 맞게 다시 컴파일한다
+      - run: npm ci
+
+      # 서버 주소와 키는 빌드할 때 앱 안에 들어간다(설계 8.9).
+      # 키는 꺼낼 수 있으므로 서버에서 사용량 제한으로 막는다(#42, PR #43 논의).
+      # 값이 비어 있으면 Mock으로 도는 앱이 배포되므로 여기서 멈춘다.
+      - name: Write .env from secrets
+        env:
+          EXTRACT_URL: ${{ secrets.MAIN_VITE_EXTRACT_URL }}
+          EXTRACT_KEY: ${{ secrets.MAIN_VITE_EXTRACT_KEY }}
+        run: |
+          if [ -z "$EXTRACT_URL" ] || [ -z "$EXTRACT_KEY" ]; then
+            echo "::error::Secrets에 MAIN_VITE_EXTRACT_URL, MAIN_VITE_EXTRACT_KEY를 넣어 주세요."
+            exit 1
+          fi
+          printf 'MAIN_VITE_EXTRACT_URL=%s\nMAIN_VITE_EXTRACT_KEY=%s\n' "$EXTRACT_URL" "$EXTRACT_KEY" > .env
+
+      # 맥 서버는 사용 시간이 비싸서 테스트는 Windows에서만 돌린다(build-mac.yml과 같은 방침)
+      - name: Test
+        if: matrix.platform == 'win'
+        run: npm test
+
+      # build:* 안의 npm run build가 타입 검사를 한다.
+      # --publish never: electron-builder가 직접 Release에 올리지 않게 한다(올리는 건 release job)
+      - name: Build
+        run: npm run build:${{ matrix.platform }} -- --publish never
+
+      # 서버 추출기 코드(PR #43)가 들어간 뒤로는 서버 주소가 앱 안에 있어야 한다.
+      # 키는 로그에 남기지 않도록 주소만 확인한다.
+      - name: Check server address is bundled
+        env:
+          EXTRACT_URL: ${{ secrets.MAIN_VITE_EXTRACT_URL }}
+        run: |
+          if ! grep -rq "MAIN_VITE_EXTRACT_URL" src; then
+            echo "::warning::서버 추출기 코드가 없어 이 빌드는 Mock 추출기로 동작합니다."
+            exit 0
+          fi
+          if ! grep -rqF "$EXTRACT_URL" out/main; then
+            echo "::error::빌드된 앱에 서버 주소가 없습니다. .env가 빌드에 반영되지 않았습니다."
+            exit 1
+          fi
+          echo "서버 주소 포함 확인"
+
+      # 패키징된 앱 안의 Electron으로 better-sqlite3를 불러와 DB를 열고 쓰고 읽어 본다.
+      # electron-builder.yml에서 다른 OS용 prebuild를 빼므로 이 OS용이 제대로 들어갔는지 확인한다.
+      - name: Check packaged app (Windows)
+        if: matrix.platform == 'win'
+        run: |
+          EXE=$(ls dist/win-unpacked/*.exe | head -n 1)
+          MODULE="$PWD/dist/win-unpacked/resources/app.asar.unpacked/node_modules/better-sqlite3"
+          ELECTRON_RUN_AS_NODE=1 "$EXE" -e "
+            const Database = require(process.argv[1])
+            const db = new Database(':memory:')
+            db.exec('create table t (v text)')
+            db.prepare('insert into t values (?)').run('ok')
+            console.log('sqlite', db.prepare('select sqlite_version() v').get().v, db.prepare('select v from t').get().v)
+          " "$MODULE"
+          ls "$MODULE/prebuilds" 2>/dev/null || true
+          du -sh dist/win-unpacked dist/*-setup.exe
+
+      - name: Check packaged app (mac)
+        if: matrix.platform == 'mac'
+        run: |
+          APP=$(ls -d dist/mac-arm64/*.app | head -n 1)
+          NAME=$(basename "$APP" .app)
+          MODULE="$PWD/$APP/Contents/Resources/app.asar.unpacked/node_modules/better-sqlite3"
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/$NAME" -e "
+            const Database = require(process.argv[1])
+            const db = new Database(':memory:')
+            db.exec('create table t (v text)')
+            db.prepare('insert into t values (?)').run('ok')
+            console.log('sqlite', db.prepare('select sqlite_version() v').get().v, db.prepare('select v from t').get().v)
+          " "$MODULE"
+          ls "$MODULE/prebuilds"
+          du -sh "$APP" dist/*.dmg
+
+      # 버전이 붙은 파일과 랜딩용 고정 이름 파일을 함께 올린다
+      - name: Collect installers
+        run: |
+          mkdir -p release
+          if [ "${{ matrix.platform }}" = "win" ]; then
+            FILE=$(ls dist/*-setup.exe | head -n 1)
+          else
+            FILE=$(ls dist/*.dmg | head -n 1)
+          fi
+          cp "$FILE" release/
+          cp "$FILE" "release/${{ matrix.fixed-name }}"
+          ls -la release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.platform }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
+
+  # 두 빌드가 모두 성공했을 때만 Release 초안을 만든다
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: Create or update draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls -la release
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            IS_DRAFT=$(gh release view "$TAG" --json isDraft -q .isDraft)
+            if [ "$IS_DRAFT" != "true" ]; then
+              echo "::error::$TAG 는 이미 Publish된 Release라 덮어쓰지 않습니다. 버전을 올려 새 태그로 배포해 주세요."
+              exit 1
+            fi
+            # 재실행: 기존 초안의 같은 이름 파일을 바꾼다
+            gh release upload "$TAG" release/* --clobber
+          else
+            gh release create "$TAG" release/* --draft --verify-tag --title "$TAG" --generate-notes
+          fi
+          echo "Release 초안: https://github.com/$GH_REPO/releases/tag/$TAG"
